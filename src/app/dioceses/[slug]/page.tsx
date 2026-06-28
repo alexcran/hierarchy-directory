@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
@@ -9,6 +10,12 @@ import { BishopPortrait } from '@/components/bishop/BishopPortrait'
 import { isElectRole } from '@/lib/utils/roles'
 
 export const dynamic = 'force-dynamic'
+
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const diocese = await getDioceseBySlug(params.slug)
+  if (!diocese) return {}
+  return { title: diocese.seeName }
+}
 
 const ORDINARY_ROLES = new Set(['ordinary', 'diocesan_bishop', 'archbishop', 'bishop_elect', 'archbishop_elect', 'coadjutor', 'apostolic_administrator', 'archbishop_emeritus', 'bishop_emeritus', 'coadjutor_emeritus'])
 const AUXILIARY_ROLES = new Set(['auxiliary', 'auxiliary_bishop_elect', 'auxiliary_emeritus'])

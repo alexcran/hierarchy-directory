@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft, ExternalLink } from 'lucide-react'
@@ -14,6 +15,12 @@ import { computeStyleOfAddress, getStyleOfAddressColor } from '@/lib/utils/style
 import { isElectRole } from '@/lib/utils/roles'
 
 export const dynamic = 'force-dynamic'
+
+export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  const bishop = await getBishopBySlug(params.slug)
+  if (!bishop) return {}
+  return { title: formatName(bishop, { honorific: false, isCardinal: !!bishop.cardinalate }) }
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

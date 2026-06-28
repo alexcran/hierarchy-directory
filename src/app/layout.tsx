@@ -24,8 +24,22 @@ const publicSans = Public_Sans({
 })
 
 export const metadata: Metadata = {
-  title: 'Hierarchy.Directory',
+  title: {
+    default: 'Hierarchy.Directory — A Visual Directory of the Hierarchy of the Catholic Church',
+    template: '%s | Hierarchy.Directory',
+  },
   description: 'A visual directory of the hierarchy of the Catholic Church. Currently featuring the bishops and dioceses of the United States.',
+  icons: {
+    icon: '/favicon.png',
+    apple: '/apple-touch-icon.png',
+  },
+  openGraph: {
+    type: 'website',
+    siteName: 'Hierarchy.Directory',
+    title: 'Hierarchy.Directory — A Visual Directory of the Hierarchy of the Catholic Church',
+    description: 'A visual directory of the hierarchy of the Catholic Church. Currently featuring the bishops and dioceses of the United States.',
+    images: [{ url: '/hierarchy-directory-created-with-logo.png', alt: 'Hierarchy.Directory' }],
+  },
 }
 
 export default function RootLayout({
