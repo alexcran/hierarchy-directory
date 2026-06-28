@@ -10,6 +10,7 @@
 
 import * as fs from 'fs'
 import * as cheerio from 'cheerio'
+import type { AnyNode } from 'domhandler'
 import type { BishopWikidata } from './fetch-wikidata.ts'
 
 const BASE_URL = 'https://www.catholic-hierarchy.org/bishop'
@@ -129,11 +130,11 @@ async function fetchBishopPage(chId: string): Promise<{
 
   // ── Main event table: Date | Age | Event | Title ──────────────────────────
   // Find the table with those exact headers
-  let eventTable: cheerio.Cheerio<cheerio.Element> | null = null
+  let eventTable: cheerio.Cheerio<AnyNode> | null = null
   $('table').each((_, tbl) => {
     const headers = $(tbl).find('th').map((_, th) => $(th).text().trim().toLowerCase()).get()
     if (headers.includes('date') && headers.includes('event')) {
-      eventTable = $(tbl) as unknown as cheerio.Cheerio<cheerio.Element>
+      eventTable = $(tbl) as unknown as cheerio.Cheerio<AnyNode>
     }
   })
 
@@ -151,7 +152,7 @@ async function fetchBishopPage(chId: string): Promise<{
   const events: EventRow[] = []
 
   if (eventTable) {
-    (eventTable as unknown as cheerio.Cheerio<cheerio.Element>).find('tr').slice(1).each((_, row) => {
+    (eventTable as unknown as cheerio.Cheerio<AnyNode>).find('tr').slice(1).each((_, row) => {
       const cells = $(row).find('td')
       if (cells.length < 3) return
 

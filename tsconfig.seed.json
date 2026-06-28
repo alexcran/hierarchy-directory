@@ -7,5 +7,6 @@
     "isolatedModules": false,
     "esModuleInterop": true
   },
-  "include": ["prisma/**/*.ts"]
+  "include": ["prisma/**/*.ts"],
+  "exclude": ["node_modules"]
 }

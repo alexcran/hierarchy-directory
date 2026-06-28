@@ -272,7 +272,6 @@ async function processBishop(bishop: BishopFull, sees: SeeRecord[], stats: Stats
           dateOfBirth:         birthDate  ? new Date(birthDate)  : null,
           dateOfDeath:         deathDate  ? new Date(deathDate)  : null,
           placeOfBirth:        birthPlace ?? null,
-          religiousOrder:      religiousOrder ?? null,
         },
       })
     }
