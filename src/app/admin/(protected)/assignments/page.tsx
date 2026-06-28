@@ -1,31 +1,36 @@
 import prisma from '@/lib/prisma'
 import { formatName } from '@/lib/utils/formatName'
 import { AssignmentsClient, type AssignmentRow } from './AssignmentsClient'
+import { type Prisma } from '@prisma/client'
 
 export const metadata = { title: 'Assignments — Admin' }
 export const dynamic = 'force-dynamic'
 
-export default async function AdminAssignmentsPage() {
-  const assignments = await prisma.assignment.findMany({
-    orderBy: [{ isCurrent: 'desc' }, { startDate: 'desc' }],
-    include: {
-      person: {
-        select: {
-          id: true,
-          firstName: true,
-          middleName: true,
-          lastName: true,
-          suffix: true,
-          religiousOrder: true,
-          portraitUrl: true,
-          cardinalate: { select: { id: true } },
-        },
-      },
-      see: { select: { name: true } },
+const assignmentInclude = {
+  person: {
+    select: {
+      id: true,
+      firstName: true,
+      middleName: true,
+      lastName: true,
+      suffix: true,
+      religiousOrder: true,
+      portraitUrl: true,
+      cardinalate: { select: { id: true } },
     },
+  },
+  see: { select: { name: true } },
+} satisfies Prisma.AssignmentInclude
+
+type AdminAssignment = Prisma.AssignmentGetPayload<{ include: typeof assignmentInclude }>
+
+export default async function AdminAssignmentsPage() {
+  const assignments: AdminAssignment[] = await prisma.assignment.findMany({
+    orderBy: [{ isCurrent: 'desc' }, { startDate: 'desc' }],
+    include: assignmentInclude,
   })
 
-  const rows: AssignmentRow[] = assignments.map(a => ({
+  const rows: AssignmentRow[] = assignments.map((a: AdminAssignment) => ({
     id:          a.id,
     personId:    a.personId,
     personName:  formatName(a.person, { honorific: false, isCardinal: !!a.person.cardinalate }),

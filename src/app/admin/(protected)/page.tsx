@@ -1,6 +1,7 @@
 import prisma from '@/lib/prisma'
 import Link from 'next/link'
 import { formatName } from '@/lib/utils/formatName'
+import { type Prisma } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,6 +24,33 @@ const RANK_STYLE: Record<Rank, string> = {
   Bishop:     'bg-green-50 text-green-700',
 }
 
+const recentPersonSelect = {
+  id: true,
+  firstName: true,
+  middleName: true,
+  lastName: true,
+  suffix: true,
+  religiousOrder: true,
+  updatedAt: true,
+  cardinalate: { select: { id: true } },
+  assignments: {
+    where: { isCurrent: true },
+    select: { role: true, see: { select: { seeType: true } } },
+    take: 1,
+    orderBy: { startDate: 'desc' },
+  },
+} satisfies Prisma.PersonSelect
+
+const recentSeeSelect = {
+  id: true,
+  name: true,
+  seeType: true,
+  updatedAt: true,
+} satisfies Prisma.SeeSelect
+
+type RecentPerson = Prisma.PersonGetPayload<{ select: typeof recentPersonSelect }>
+type RecentSee = Prisma.SeeGetPayload<{ select: typeof recentSeeSelect }>
+
 export default async function AdminDashboardPage() {
   type AutoActivityRow = {
     id: string
@@ -40,34 +68,26 @@ export default async function AdminDashboardPage() {
     LIMIT 20
   `.catch(() => [] as AutoActivityRow[])
 
-  const [totalBishops, totalDioceses, portraitsUploaded, recentPersons, recentSees, autoActivity] = await Promise.all([
+  const [totalBishops, totalDioceses, portraitsUploaded, recentPersons, recentSees, autoActivity]: [
+    number,
+    number,
+    number,
+    RecentPerson[],
+    RecentSee[],
+    AutoActivityRow[],
+  ] = await Promise.all([
     prisma.person.count(),
     prisma.see.count(),
     prisma.person.count({ where: { portraitUrl: { not: null } } }),
     prisma.person.findMany({
       orderBy: { updatedAt: 'desc' },
       take: 20,
-      select: {
-        id: true,
-        firstName: true,
-        middleName: true,
-        lastName: true,
-        suffix: true,
-        religiousOrder: true,
-        updatedAt: true,
-        cardinalate: { select: { id: true } },
-        assignments: {
-          where: { isCurrent: true },
-          select: { role: true, see: { select: { seeType: true } } },
-          take: 1,
-          orderBy: { startDate: 'desc' },
-        },
-      },
+      select: recentPersonSelect,
     }),
     prisma.see.findMany({
       orderBy: { updatedAt: 'desc' },
       take: 20,
-      select: { id: true, name: true, seeType: true, updatedAt: true },
+      select: recentSeeSelect,
     }),
     autoActivityPromise,
   ])
@@ -84,7 +104,7 @@ export default async function AdminDashboardPage() {
   }
 
   const activity: ActivityItem[] = [
-    ...recentPersons.map((p) => {
+    ...recentPersons.map((p: RecentPerson) => {
       const rank = getRank(p.cardinalate, p.assignments)
       return {
         key: `p-${p.id}`,
@@ -95,7 +115,7 @@ export default async function AdminDashboardPage() {
         updatedAt: p.updatedAt,
       }
     }),
-    ...recentSees.map((s) => ({
+    ...recentSees.map((s: RecentSee) => ({
       key: `s-${s.id}`,
       label: s.name,
       href: `/admin/dioceses/${s.id}`,
@@ -103,7 +123,7 @@ export default async function AdminDashboardPage() {
       badgeStyle: 'bg-blue-50 text-blue-700',
       updatedAt: s.updatedAt,
     })),
-    ...autoActivity.map((a) => ({
+    ...autoActivity.map((a: AutoActivityRow) => ({
       key: `auto-${a.id}`,
       label: a.label,
       href: a.href,
@@ -112,7 +132,7 @@ export default async function AdminDashboardPage() {
       updatedAt: a.created_at,
     })),
   ]
-    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+    .sort((a: ActivityItem, b: ActivityItem) => b.updatedAt.getTime() - a.updatedAt.getTime())
     .slice(0, 20)
 
   const stats = [

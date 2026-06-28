@@ -11,8 +11,46 @@ import { ConsecrationEditor, type ConsecrationData } from './ConsecrationEditor'
 import { EducationEditor, type EducationRecord } from './EducationEditor'
 import { VaticanEventsEditor, type VaticanEventRecord } from './VaticanEventsEditor'
 import { BreadcrumbSetter } from '@/components/admin/BreadcrumbSetter'
+import { type Prisma } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
+
+const bishopEditInclude = {
+  cardinalate: true,
+  religiousOrder: { select: { id: true, abbreviation: true } },
+  assignments: {
+    orderBy: { startDate: 'desc' },
+    include: { see: { select: { id: true, name: true, seeType: true } } },
+  },
+  priesthoodOrdination: {
+    include: {
+      ordainingBishop:  { select: { id: true, firstName: true, middleName: true, lastName: true, suffix: true } },
+      incardinationSee: { select: { id: true, name: true } },
+      ordinationSee:    { select: { id: true, name: true } },
+    },
+  },
+  education: {
+    orderBy: { ordinal: 'asc' },
+  },
+  vaticanEvents: {
+    orderBy: { eventDate: 'desc' },
+  },
+  consecrations: {
+    orderBy: { date: 'desc' },
+    take: 1,
+    include: {
+      principalConsecrator: { select: { id: true, firstName: true, middleName: true, lastName: true, suffix: true } },
+      coConsecrators: {
+        orderBy: { ordinal: 'asc' },
+        include: {
+          coConsecrator: { select: { id: true, firstName: true, middleName: true, lastName: true, suffix: true } },
+        },
+      },
+    },
+  },
+} satisfies Prisma.PersonInclude
+
+type BishopEditPerson = Prisma.PersonGetPayload<{ include: typeof bishopEditInclude }>
 
 function fmtDate(d: Date | null): string {
   return d ? d.toISOString().split('T')[0] : ''
@@ -31,40 +69,7 @@ export default async function BishopEditPage({ params }: { params: { id: string 
   const [person, religiousOrders] = await Promise.all([
   prisma.person.findUnique({
     where: { id: params.id },
-    include: {
-      cardinalate: true,
-      religiousOrder: { select: { id: true, abbreviation: true } },
-      assignments: {
-        orderBy: { startDate: 'desc' },
-        include: { see: { select: { id: true, name: true, seeType: true } } },
-      },
-      priesthoodOrdination: {
-        include: {
-          ordainingBishop:  { select: { id: true, firstName: true, middleName: true, lastName: true, suffix: true } },
-          incardinationSee: { select: { id: true, name: true } },
-          ordinationSee:    { select: { id: true, name: true } },
-        },
-      },
-      education: {
-        orderBy: { ordinal: 'asc' },
-      },
-      vaticanEvents: {
-        orderBy: { eventDate: 'desc' },
-      },
-      consecrations: {
-        orderBy: { date: 'desc' },
-        take: 1,
-        include: {
-          principalConsecrator: { select: { id: true, firstName: true, middleName: true, lastName: true, suffix: true } },
-          coConsecrators: {
-            orderBy: { ordinal: 'asc' },
-            include: {
-              coConsecrator: { select: { id: true, firstName: true, middleName: true, lastName: true, suffix: true } },
-            },
-          },
-        },
-      },
-    },
+    include: bishopEditInclude,
   }),
   prisma.religiousOrder.findMany({
     orderBy: { fullName: 'asc' },
@@ -75,7 +80,9 @@ export default async function BishopEditPage({ params }: { params: { id: string 
   if (!person) notFound()
 
   // Education records
-  const educationRecords: EducationRecord[] = person.education.map(e => ({
+  const typedPerson = person as BishopEditPerson
+
+  const educationRecords: EducationRecord[] = typedPerson.education.map((e: BishopEditPerson['education'][number]) => ({
     id:           e.id,
     institution:  e.institution,
     degree:       e.degree ?? '',
@@ -87,25 +94,25 @@ export default async function BishopEditPage({ params }: { params: { id: string 
 
   // Basic form data
   const formData: Record<string, string | null> = {
-    id:                  person.id,
-    firstName:           person.firstName,
-    middleName:          person.middleName,
-    lastName:            person.lastName,
-    suffix:              person.suffix,
-    religiousOrderId:    person.religiousOrder?.id ?? null,
-    styleOfAddress:      person.styleOfAddress,
-    dateOfBirth:         fmtDate(person.dateOfBirth),
-    dateOfDeath:         fmtDate(person.dateOfDeath),
-    placeOfBirth:        person.placeOfBirth,
-    motto:               person.motto,
-    catholicHierarchyId: person.catholicHierarchyId,
-    gcatholicId:         person.gcatholicId,
-    wikipediaUrl:        person.wikipediaUrl,
-    diocesanBioUrl:      person.diocesanBioUrl,
+    id:                  typedPerson.id,
+    firstName:           typedPerson.firstName,
+    middleName:          typedPerson.middleName,
+    lastName:            typedPerson.lastName,
+    suffix:              typedPerson.suffix,
+    religiousOrderId:    typedPerson.religiousOrder?.id ?? null,
+    styleOfAddress:      typedPerson.styleOfAddress,
+    dateOfBirth:         fmtDate(typedPerson.dateOfBirth),
+    dateOfDeath:         fmtDate(typedPerson.dateOfDeath),
+    placeOfBirth:        typedPerson.placeOfBirth,
+    motto:               typedPerson.motto,
+    catholicHierarchyId: typedPerson.catholicHierarchyId,
+    gcatholicId:         typedPerson.gcatholicId,
+    wikipediaUrl:        typedPerson.wikipediaUrl,
+    diocesanBioUrl:      typedPerson.diocesanBioUrl,
   }
 
   // Assignments
-  const assignmentRows: AssignmentRow[] = person.assignments.map(a => ({
+  const assignmentRows: AssignmentRow[] = typedPerson.assignments.map((a: BishopEditPerson['assignments'][number]) => ({
     id:            a.id,
     seeId:         a.see.id,
     seeName:       a.see.name,
@@ -120,7 +127,7 @@ export default async function BishopEditPage({ params }: { params: { id: string 
   }))
 
   // Ordination
-  const ord = person.priesthoodOrdination
+  const ord = typedPerson.priesthoodOrdination
   const ordinationData: OrdinationData | null = ord ? {
     date:                          fmtDate(ord.date),
     location:                      ord.location ?? '',
@@ -134,21 +141,21 @@ export default async function BishopEditPage({ params }: { params: { id: string 
   } : null
 
   // Consecration
-  const con = person.consecrations[0] ?? null
+  const con = typedPerson.consecrations[0] ?? null
   const consecrationData: ConsecrationData | null = con ? {
     id:                       con.id,
     date:                     fmtDate(con.date),
     location:                 con.location ?? '',
     principalConsecratorId:   con.principalConsecratorId,
     principalConsecratorName: con.principalConsecrator ? formatName(con.principalConsecrator) : null,
-    coConsecrators:           con.coConsecrators.map(cc => ({
+    coConsecrators:           con.coConsecrators.map((cc: NonNullable<typeof con>['coConsecrators'][number]) => ({
       id:   cc.coConsecrator.id,
       name: formatName(cc.coConsecrator),
     })),
   } : null
 
   // Cardinalate
-  const card = person.cardinalate
+  const card = typedPerson.cardinalate
   const cardinalateData = card ? {
     dateCreated:   fmtDate(card.dateCreated),
     cardinalOrder: card.cardinalOrder,
@@ -156,7 +163,7 @@ export default async function BishopEditPage({ params }: { params: { id: string 
     isElector:     card.isElector,
   } : null
 
-  const vaticanEventRecords: VaticanEventRecord[] = person.vaticanEvents.map(e => ({
+  const vaticanEventRecords: VaticanEventRecord[] = typedPerson.vaticanEvents.map((e: BishopEditPerson['vaticanEvents'][number]) => ({
     id:          e.id,
     eventType:   e.eventType,
     eventDate:   fmtDate(e.eventDate),
@@ -166,7 +173,7 @@ export default async function BishopEditPage({ params }: { params: { id: string 
 
   return (
     <>
-      <BreadcrumbSetter label={formatName(person, { isCardinal: !!person.cardinalate })} />
+      <BreadcrumbSetter label={formatName(typedPerson, { isCardinal: !!typedPerson.cardinalate })} />
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3 min-w-0">
           <Link href="/admin/bishops" className="text-sm font-body text-text-tertiary hover:text-text-primary transition-colors">
@@ -174,11 +181,11 @@ export default async function BishopEditPage({ params }: { params: { id: string 
           </Link>
           <span className="text-text-tertiary">/</span>
           <h1 className="font-display text-2xl font-semibold text-text-primary truncate">
-            {formatName(person, { isCardinal: !!person.cardinalate })}
+            {formatName(typedPerson, { isCardinal: !!typedPerson.cardinalate })}
           </h1>
         </div>
         <Link
-          href={`/bishops/${person.slug}`}
+          href={`/bishops/${typedPerson.slug}`}
           target="_blank"
           className="flex-shrink-0 text-sm font-body text-text-secondary hover:text-text-primary transition-colors"
         >
@@ -188,13 +195,13 @@ export default async function BishopEditPage({ params }: { params: { id: string 
 
       <div className="space-y-6">
         <BishopEditForm person={formData} religiousOrders={religiousOrders} />
-        <PortraitUploader personId={person.id} currentUrl={person.portraitUrl} currentPhotoCredit={person.photoCredit} />
-        <CardinalateEditor personId={person.id} initial={cardinalateData} />
-        <AssignmentsEditor personId={person.id} initial={assignmentRows} />
-        <OrdinationEditor personId={person.id} initial={ordinationData} />
-        <ConsecrationEditor personId={person.id} initial={consecrationData} />
-        <EducationEditor personId={person.id} initial={educationRecords} />
-        <VaticanEventsEditor personId={person.id} initial={vaticanEventRecords} />
+        <PortraitUploader personId={typedPerson.id} currentUrl={typedPerson.portraitUrl} currentPhotoCredit={typedPerson.photoCredit} />
+        <CardinalateEditor personId={typedPerson.id} initial={cardinalateData} />
+        <AssignmentsEditor personId={typedPerson.id} initial={assignmentRows} />
+        <OrdinationEditor personId={typedPerson.id} initial={ordinationData} />
+        <ConsecrationEditor personId={typedPerson.id} initial={consecrationData} />
+        <EducationEditor personId={typedPerson.id} initial={educationRecords} />
+        <VaticanEventsEditor personId={typedPerson.id} initial={vaticanEventRecords} />
       </div>
     </>
   )

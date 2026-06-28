@@ -2,8 +2,30 @@ import Link from 'next/link'
 import prisma from '@/lib/prisma'
 import { formatName } from '@/lib/utils/formatName'
 import { BishopListClient, type BishopRow } from './BishopListClient'
+import { type Prisma } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
+
+const personSelect = {
+  id: true,
+  firstName: true,
+  middleName: true,
+  lastName: true,
+  suffix: true,
+  religiousOrder: true,
+  portraitUrl: true,
+  slug: true,
+  updatedAt: true,
+  cardinalate: { select: { id: true } },
+  assignments: {
+    where: { isCurrent: true },
+    select: { role: true, see: { select: { name: true, seeType: true } } },
+    take: 1,
+    orderBy: { startDate: 'desc' },
+  },
+} satisfies Prisma.PersonSelect
+
+type AdminBishop = Prisma.PersonGetPayload<{ select: typeof personSelect }>
 
 function getRank(
   cardinalate: { id: string } | null,
@@ -17,29 +39,12 @@ function getRank(
 
 
 export default async function AdminBishopsPage() {
-  const persons = await prisma.person.findMany({
+  const persons: AdminBishop[] = await prisma.person.findMany({
     orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
-    select: {
-      id: true,
-      firstName: true,
-      middleName: true,
-      lastName: true,
-      suffix: true,
-      religiousOrder: true,
-      portraitUrl: true,
-      slug: true,
-      updatedAt: true,
-      cardinalate: { select: { id: true } },
-      assignments: {
-        where: { isCurrent: true },
-        select: { role: true, see: { select: { name: true, seeType: true } } },
-        take: 1,
-        orderBy: { startDate: 'desc' },
-      },
-    },
+    select: personSelect,
   })
 
-  const rows: BishopRow[] = persons.map(p => ({
+  const rows: BishopRow[] = persons.map((p: AdminBishop) => ({
     id: p.id,
     slug: p.slug,
     displayName: formatName(p, { honorific: false, isCardinal: !!p.cardinalate }),

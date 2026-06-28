@@ -2,32 +2,48 @@ import prisma from '@/lib/prisma'
 import { formatSeeName } from '@/lib/utils/formatSeeName'
 import { formatName } from '@/lib/utils/formatName'
 import { DioceseListClient, type DioceseRow } from './DioceseListClient'
+import { type Prisma } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
 
 const ORDINARY_ROLES = ['ordinary', 'diocesan_bishop', 'archbishop'] as const
 
-export default async function AdminDiocesesPage() {
-  const sees = await prisma.see.findMany({
-    orderBy: { name: 'asc' },
+const seeSelect = {
+  id: true,
+  slug: true,
+  name: true,
+  seeType: true,
+  namePrefixOverride: true,
+  coatOfArmsUrl: true,
+  updatedAt: true,
+  metropolitanSee: { select: { name: true, seeType: true, namePrefixOverride: true } },
+  assignments: {
+    where: { isCurrent: true, role: { in: [...ORDINARY_ROLES] } },
     select: {
-      id: true,
-      slug: true,
-      name: true,
-      seeType: true,
-      namePrefixOverride: true,
-      coatOfArmsUrl: true,
-      updatedAt: true,
-      metropolitanSee: { select: { name: true, seeType: true, namePrefixOverride: true } },
-      assignments: {
-        where: { isCurrent: true, role: { in: [...ORDINARY_ROLES] } },
-        select: { person: { select: { firstName: true, middleName: true, lastName: true, suffix: true, religiousOrder: true, cardinalate: { select: { id: true } } } } },
-        take: 1,
+      person: {
+        select: {
+          firstName: true,
+          middleName: true,
+          lastName: true,
+          suffix: true,
+          religiousOrder: true,
+          cardinalate: { select: { id: true } },
+        },
       },
     },
+    take: 1,
+  },
+} satisfies Prisma.SeeSelect
+
+type AdminSee = Prisma.SeeGetPayload<{ select: typeof seeSelect }>
+
+export default async function AdminDiocesesPage() {
+  const sees: AdminSee[] = await prisma.see.findMany({
+    orderBy: { name: 'asc' },
+    select: seeSelect,
   })
 
-  const rows: DioceseRow[] = sees.map(s => ({
+  const rows: DioceseRow[] = sees.map((s: AdminSee) => ({
     id:              s.id,
     slug:            s.slug,
     displayName:     formatSeeName(s.name, s.seeType, s.namePrefixOverride),

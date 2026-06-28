@@ -1,10 +1,69 @@
 import Link from 'next/link'
 import prisma from '@/lib/prisma'
 import { formatName } from '@/lib/utils/formatName'
+import { type Prisma } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
 
 const ORDINARY_ROLES = new Set(['ordinary', 'diocesan_bishop', 'archbishop'])
+
+const qualityPersonSelect = {
+  id: true,
+  firstName: true,
+  middleName: true,
+  lastName: true,
+  suffix: true,
+  religiousOrder: true,
+  cardinalate: { select: { id: true } },
+  assignments: {
+    where: { isCurrent: true },
+    orderBy: { startDate: 'desc' },
+    select: {
+      id: true,
+      role: true,
+      see: { select: { id: true, name: true, seeType: true } },
+    },
+  },
+} satisfies Prisma.PersonSelect
+
+const qualitySeeSelect = {
+  id: true,
+  name: true,
+  seeType: true,
+  assignments: {
+    where: { isCurrent: true },
+    orderBy: { startDate: 'desc' },
+    select: {
+      id: true,
+      role: true,
+      person: {
+        select: {
+          id: true,
+          firstName: true,
+          middleName: true,
+          lastName: true,
+          suffix: true,
+          religiousOrder: true,
+          cardinalate: { select: { id: true } },
+        },
+      },
+    },
+  },
+} satisfies Prisma.SeeSelect
+
+const qualityNamePersonSelect = {
+  id: true,
+  firstName: true,
+  middleName: true,
+  lastName: true,
+  suffix: true,
+  religiousOrder: true,
+  cardinalate: { select: { id: true } },
+} satisfies Prisma.PersonSelect
+
+type QualityPerson = Prisma.PersonGetPayload<{ select: typeof qualityPersonSelect }>
+type QualitySee = Prisma.SeeGetPayload<{ select: typeof qualitySeeSelect }>
+type QualityNamePerson = Prisma.PersonGetPayload<{ select: typeof qualityNamePersonSelect }>
 
 function seeLabel(see: { name: string; seeType: string }) {
   const prefix = see.seeType === 'archdiocese' ? 'Archdiocese of' : 'Diocese of'
@@ -38,70 +97,27 @@ function EmptyState() {
 }
 
 export default async function AdminQualityPage() {
-  const [peopleWithCurrentAssignments, sees, missingPortraits, missingCredits] = await Promise.all([
+  const [peopleWithCurrentAssignments, sees, missingPortraits, missingCredits]: [
+    QualityPerson[],
+    QualitySee[],
+    QualityNamePerson[],
+    QualityNamePerson[],
+  ] = await Promise.all([
     prisma.person.findMany({
       where: { assignments: { some: { isCurrent: true } } },
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
-      select: {
-        id: true,
-        firstName: true,
-        middleName: true,
-        lastName: true,
-        suffix: true,
-        religiousOrder: true,
-        cardinalate: { select: { id: true } },
-        assignments: {
-          where: { isCurrent: true },
-          orderBy: { startDate: 'desc' },
-          select: {
-            id: true,
-            role: true,
-            see: { select: { id: true, name: true, seeType: true } },
-          },
-        },
-      },
+      select: qualityPersonSelect,
     }),
     prisma.see.findMany({
       where: { dateSuppressed: null },
       orderBy: [{ seeType: 'asc' }, { name: 'asc' }],
-      select: {
-        id: true,
-        name: true,
-        seeType: true,
-        assignments: {
-          where: { isCurrent: true },
-          orderBy: { startDate: 'desc' },
-          select: {
-            id: true,
-            role: true,
-            person: {
-              select: {
-                id: true,
-                firstName: true,
-                middleName: true,
-                lastName: true,
-                suffix: true,
-                religiousOrder: true,
-                cardinalate: { select: { id: true } },
-              },
-            },
-          },
-        },
-      },
+      select: qualitySeeSelect,
     }),
     prisma.person.findMany({
       where: { portraitUrl: null },
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
       take: 100,
-      select: {
-        id: true,
-        firstName: true,
-        middleName: true,
-        lastName: true,
-        suffix: true,
-        religiousOrder: true,
-        cardinalate: { select: { id: true } },
-      },
+      select: qualityNamePersonSelect,
     }),
     prisma.person.findMany({
       where: {
@@ -110,32 +126,24 @@ export default async function AdminQualityPage() {
       },
       orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
       take: 100,
-      select: {
-        id: true,
-        firstName: true,
-        middleName: true,
-        lastName: true,
-        suffix: true,
-        religiousOrder: true,
-        cardinalate: { select: { id: true } },
-      },
+      select: qualityNamePersonSelect,
     }),
   ])
 
-  const peopleWithDuplicateCurrentAssignments = peopleWithCurrentAssignments.filter((person) => person.assignments.length > 1)
+  const peopleWithDuplicateCurrentAssignments = peopleWithCurrentAssignments.filter((person: QualityPerson) => person.assignments.length > 1)
   const seesWithDuplicateCurrentOrdinaries = sees
-    .map((see) => ({
+    .map((see: QualitySee) => ({
       ...see,
-      ordinaries: see.assignments.filter((assignment) => ORDINARY_ROLES.has(assignment.role)),
+      ordinaries: see.assignments.filter((assignment: QualitySee['assignments'][number]) => ORDINARY_ROLES.has(assignment.role)),
     }))
-    .filter((see) => see.ordinaries.length > 1)
+    .filter((see: QualitySee & { ordinaries: QualitySee['assignments'] }) => see.ordinaries.length > 1)
 
   const seesMissingCurrentOrdinary = sees
-    .map((see) => ({
+    .map((see: QualitySee) => ({
       ...see,
-      ordinaries: see.assignments.filter((assignment) => ORDINARY_ROLES.has(assignment.role)),
+      ordinaries: see.assignments.filter((assignment: QualitySee['assignments'][number]) => ORDINARY_ROLES.has(assignment.role)),
     }))
-    .filter((see) => see.ordinaries.length === 0)
+    .filter((see: QualitySee & { ordinaries: QualitySee['assignments'] }) => see.ordinaries.length === 0)
 
   return (
     <>

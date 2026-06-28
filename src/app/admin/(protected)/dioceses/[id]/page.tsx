@@ -7,6 +7,7 @@ import { DioceseEditForm } from './DioceseEditForm'
 import { CoatOfArmsUploader } from './CoatOfArmsUploader'
 import { DioceseStatisticsEditor, type StatRecord } from './DioceseStatisticsEditor'
 import { BreadcrumbSetter } from '@/components/admin/BreadcrumbSetter'
+import { type Prisma } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,25 +19,29 @@ function roleLabel(role: string) {
   return role.charAt(0).toUpperCase() + role.slice(1).replace(/_/g, ' ')
 }
 
+const seeEditInclude = {
+  metropolitanSee: { select: { id: true, name: true, seeType: true, namePrefixOverride: true } },
+  country: { select: { id: true, name: true, isoCode: true } },
+  rite:    { select: { id: true, name: true, type: true } },
+  assignments: {
+    orderBy: { startDate: 'desc' },
+    include: {
+      person: {
+        select: { id: true, firstName: true, middleName: true, lastName: true, suffix: true, slug: true },
+      },
+    },
+  },
+  statistics: {
+    orderBy: { year: 'desc' },
+  },
+} satisfies Prisma.SeeInclude
+
+type AdminSeeDetail = Prisma.SeeGetPayload<{ include: typeof seeEditInclude }>
+
 async function getSee(id: string) {
   return prisma.see.findUnique({
     where: { id },
-    include: {
-      metropolitanSee: { select: { id: true, name: true, seeType: true, namePrefixOverride: true } },
-      country: { select: { id: true, name: true, isoCode: true } },
-      rite:    { select: { id: true, name: true, type: true } },
-      assignments: {
-        orderBy: { startDate: 'desc' },
-        include: {
-          person: {
-            select: { id: true, firstName: true, middleName: true, lastName: true, suffix: true, slug: true },
-          },
-        },
-      },
-      statistics: {
-        orderBy: { year: 'desc' },
-      },
-    },
+    include: seeEditInclude,
   })
 }
 
@@ -57,30 +62,31 @@ export default async function DioceseEditPage({ params }: { params: { id: string
   ])
 
   if (!see) notFound()
+  const typedSee = see as AdminSeeDetail
 
-  const displayName = formatSeeName(see.name, see.seeType, see.namePrefixOverride)
+  const displayName = formatSeeName(typedSee.name, typedSee.seeType, typedSee.namePrefixOverride)
 
   const formInitial = {
-    name:                see.name,
-    latinName:           see.latinName ?? '',
-    seeType:             see.seeType,
-    namePrefixOverride:  see.namePrefixOverride ?? '',
-    stateRegion:         see.stateRegion ?? '',
-    isMetropolitan:      see.isMetropolitan,
-    metropolitanSeeId:   see.metropolitanSeeId,
-    metropolitanSeeName: see.metropolitanSee
-      ? formatSeeName(see.metropolitanSee.name, see.metropolitanSee.seeType, see.metropolitanSee.namePrefixOverride)
+    name:                typedSee.name,
+    latinName:           typedSee.latinName ?? '',
+    seeType:             typedSee.seeType,
+    namePrefixOverride:  typedSee.namePrefixOverride ?? '',
+    stateRegion:         typedSee.stateRegion ?? '',
+    isMetropolitan:      typedSee.isMetropolitan,
+    metropolitanSeeId:   typedSee.metropolitanSeeId,
+    metropolitanSeeName: typedSee.metropolitanSee
+      ? formatSeeName(typedSee.metropolitanSee.name, typedSee.metropolitanSee.seeType, typedSee.metropolitanSee.namePrefixOverride)
       : null,
-    countryId:        see.countryId,
-    riteId:           see.riteId,
-    dateErected:      fmtDate(see.dateErected),
-    dateSuppressed:   fmtDate(see.dateSuppressed),
-    cathedralName:    see.cathedralName    ?? '',
-    coCathedralName:  see.coCathedralName  ?? '',
-    cathedralAddress: see.cathedralAddress ?? '',
+    countryId:        typedSee.countryId,
+    riteId:           typedSee.riteId,
+    dateErected:      fmtDate(typedSee.dateErected),
+    dateSuppressed:   fmtDate(typedSee.dateSuppressed),
+    cathedralName:    typedSee.cathedralName    ?? '',
+    coCathedralName:  typedSee.coCathedralName  ?? '',
+    cathedralAddress: typedSee.cathedralAddress ?? '',
   }
 
-  const statisticsRecords: StatRecord[] = see.statistics.map(s => ({
+  const statisticsRecords: StatRecord[] = typedSee.statistics.map((s: AdminSeeDetail['statistics'][number]) => ({
     id:                 s.id,
     year:               s.year,
     catholicPopulation: s.catholicPopulation,
@@ -104,7 +110,7 @@ export default async function DioceseEditPage({ params }: { params: { id: string
           <h1 className="font-display text-2xl font-semibold text-text-primary truncate">{displayName}</h1>
         </div>
         <Link
-          href={`/dioceses/${see.slug}`}
+          href={`/dioceses/${typedSee.slug}`}
           target="_blank"
           className="flex-shrink-0 text-sm font-body text-text-secondary hover:text-text-primary transition-colors"
         >
@@ -113,18 +119,18 @@ export default async function DioceseEditPage({ params }: { params: { id: string
       </div>
 
       <div className="space-y-6">
-        <DioceseEditForm seeId={see.id} initial={formInitial} countries={countries} rites={rites} />
-        <CoatOfArmsUploader seeId={see.id} currentUrl={see.coatOfArmsUrl} />
-        <DioceseStatisticsEditor seeId={see.id} initial={statisticsRecords} />
+        <DioceseEditForm seeId={typedSee.id} initial={formInitial} countries={countries} rites={rites} />
+        <CoatOfArmsUploader seeId={typedSee.id} currentUrl={typedSee.coatOfArmsUrl} />
+        <DioceseStatisticsEditor seeId={typedSee.id} initial={statisticsRecords} />
 
-        {see.assignments.length > 0 && (
+        {typedSee.assignments.length > 0 && (
           <div className="bg-white border border-border rounded-xl overflow-hidden">
             <div className="px-6 py-4 border-b border-border">
               <h2 className="font-body text-sm font-semibold text-text-primary">Assignment History</h2>
               <p className="text-xs font-body text-text-tertiary mt-0.5">Edit assignments from the bishop&apos;s page.</p>
             </div>
             <ul className="divide-y divide-border">
-              {see.assignments.map(a => (
+              {typedSee.assignments.map((a: AdminSeeDetail['assignments'][number]) => (
                 <li key={a.id} className="px-6 py-3 flex items-center justify-between gap-4">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
