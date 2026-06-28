@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? '')
   .split(',')
@@ -9,6 +8,79 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? '')
 function isAdminEmail(email: string | null | undefined): boolean {
   if (ADMIN_EMAILS.length === 0 && process.env.NODE_ENV !== 'production') return true
   return !!email && ADMIN_EMAILS.includes(email.toLowerCase())
+}
+
+function getSupabaseProjectRef(): string | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  if (!url) return null
+  try {
+    return new URL(url).hostname.split('.')[0] || null
+  } catch {
+    return null
+  }
+}
+
+function decodeBase64Url(value: string): string {
+  const base64 = value.replace(/-/g, '+').replace(/_/g, '/')
+  const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')
+  return atob(padded)
+}
+
+function getAuthCookieValue(req: NextRequest): string | null {
+  const projectRef = getSupabaseProjectRef()
+  if (!projectRef) return null
+
+  const key = `sb-${projectRef}-auth-token`
+  const direct = req.cookies.get(key)?.value
+  if (direct) return direct
+
+  const chunks: string[] = []
+  for (let i = 0; i < 8; i += 1) {
+    const value = req.cookies.get(`${key}.${i}`)?.value
+    if (!value) break
+    chunks.push(value)
+  }
+  return chunks.length ? chunks.join('') : null
+}
+
+function getAccessToken(req: NextRequest): string | null {
+  const rawCookie = getAuthCookieValue(req)
+  if (!rawCookie) return null
+
+  const rawSession = rawCookie.startsWith('base64-')
+    ? decodeBase64Url(rawCookie.slice('base64-'.length))
+    : rawCookie
+
+  try {
+    const session = JSON.parse(rawSession)
+    if (typeof session?.access_token === 'string') return session.access_token
+    if (Array.isArray(session) && typeof session[0] === 'string') return session[0]
+  } catch {
+    return null
+  }
+
+  return null
+}
+
+async function getSupabaseUserEmail(req: NextRequest): Promise<string | null> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  const accessToken = getAccessToken(req)
+  if (!supabaseUrl || !anonKey || !accessToken) return null
+
+  try {
+    const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${accessToken}`,
+      },
+    })
+    if (!response.ok) return null
+    const user = await response.json()
+    return typeof user?.email === 'string' ? user.email : null
+  } catch {
+    return null
+  }
 }
 
 const COMING_SOON = `<!DOCTYPE html>
@@ -53,27 +125,8 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
-  // Check for valid admin session
-  const res = NextResponse.next()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return req.cookies.getAll() },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            req.cookies.set(name, value)
-            res.cookies.set(name, value, options)
-          })
-        },
-      },
-    }
-  )
-
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (isAdminEmail(user?.email)) return res
+  const email = await getSupabaseUserEmail(req)
+  if (isAdminEmail(email)) return NextResponse.next()
 
   return new NextResponse(COMING_SOON, {
     status: 200,
