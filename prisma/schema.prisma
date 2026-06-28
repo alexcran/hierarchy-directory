@@ -1,0 +1,394 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Lookup tables
+// ---------------------------------------------------------------------------
+
+model Rite {
+  id   String @id @default(uuid())
+  name String @db.VarChar(100)
+  type String @db.VarChar(20) // 'latin' or 'eastern'
+
+  persons Person[]
+  sees    See[]
+
+  @@map("rite")
+}
+
+model Country {
+  id      String @id @default(uuid())
+  name    String @db.VarChar(100)
+  isoCode String @map("iso_code") @db.VarChar(3)
+
+  personsOfBirth Person[] @relation("PersonBornInCountry")
+  sees           See[]
+
+  @@map("country")
+}
+
+// ---------------------------------------------------------------------------
+// Person
+// ---------------------------------------------------------------------------
+
+model Person {
+  id                  String    @id @default(uuid())
+  firstName           String    @map("first_name") @db.VarChar(100)
+  middleName          String?   @map("middle_name") @db.VarChar(100)
+  lastName            String    @map("last_name") @db.VarChar(100)
+  suffix              String?   @db.VarChar(20)
+  religiousOrderId    String?   @map("religious_order_id")
+  dateOfBirth         DateTime? @map("date_of_birth") @db.Date
+  placeOfBirth        String?   @map("place_of_birth") @db.VarChar(200)
+  countryOfBirthId    String?   @map("country_of_birth_id")
+  dateOfDeath         DateTime? @map("date_of_death") @db.Date
+  riteId              String    @map("rite_id")
+  slug                String    @unique @db.VarChar(200)
+  styleOfAddress      String?   @map("style_of_address") @db.VarChar(50)
+  portraitUrl         String?   @map("portrait_url") @db.VarChar(500)
+  photoCredit         String?   @map("photo_credit") @db.VarChar(300)
+  photoLicense        String?   @map("photo_license") @db.VarChar(100)
+  motto               String?   @db.VarChar(500)
+  catholicHierarchyId String?   @map("catholic_hierarchy_id") @db.VarChar(50)
+  gcatholicId         String?   @map("gcatholic_id") @db.VarChar(50)
+  wikidataId          String?   @unique @map("wikidata_id") @db.VarChar(20)
+  viafId              String?   @map("viaf_id") @db.VarChar(30)
+  wikipediaUrl        String?   @map("wikipedia_url") @db.VarChar(500)
+  diocesanBioUrl      String?   @map("diocesan_bio_url") @db.VarChar(500)
+  nationality         String?   @db.VarChar(100)
+  bioSummary          String?   @map("bio_summary") @db.Text
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  countryOfBirth Country?        @relation("PersonBornInCountry", fields: [countryOfBirthId], references: [id])
+  rite           Rite            @relation(fields: [riteId], references: [id])
+  religiousOrder ReligiousOrder? @relation(fields: [religiousOrderId], references: [id])
+
+  education                       Education[]
+  assignments                     Assignment[]
+  vaticanEvents                   VaticanEvent[]
+  consecrations                   EpiscopalConsecration[]            @relation("PersonConsecrated")
+  consecrationsAsConsecrator      EpiscopalConsecration[]            @relation("PrincipalConsecrator")
+  coConsecratorRoles              EpiscopalConsecrationCoConsecrator[] @relation("CoConsecrator")
+  priesthoodOrdination            PriesthoodOrdination?              @relation("PersonOrdained")
+  priesthoodOrdinationsAsOrdainer PriesthoodOrdination[]             @relation("OrdainingBishop")
+  cardinalate                     Cardinalate?
+
+  @@index([lastName], map: "idx_person_last_name")
+  @@index([riteId], map: "idx_person_rite")
+  @@map("person")
+}
+
+// ---------------------------------------------------------------------------
+// Religious Order reference table
+// ---------------------------------------------------------------------------
+
+model ReligiousOrder {
+  id           String   @id @default(uuid())
+  fullName     String   @map("full_name") @db.VarChar(300)
+  abbreviation String   @map("abbreviation") @db.VarChar(50)
+  commonName   String?  @map("common_name") @db.VarChar(200)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  persons Person[]
+
+  @@map("religious_order")
+}
+
+// ---------------------------------------------------------------------------
+// See (diocese / archdiocese / eparchy / etc.)
+// ---------------------------------------------------------------------------
+
+model See {
+  id                 String    @id @default(uuid())
+  // Place name only — e.g. "Baltimore", not "Archdiocese of Baltimore".
+  // Full display name is computed at render time: seeType + namePrefixOverride + name.
+  name               String    @db.VarChar(200)
+  slug               String    @unique @db.VarChar(200)
+  seeType            String    @map("see_type") @db.VarChar(50)
+  namePrefixOverride String?   @map("name_prefix_override") @db.VarChar(100)
+  riteId             String    @map("rite_id")
+  countryId          String?   @map("country_id")
+  stateRegion        String?   @map("state_region") @db.VarChar(100)
+  seeCity            String?   @map("see_city") @db.VarChar(100)
+  latinName          String?   @map("latin_name") @db.VarChar(300)
+  metropolitanSeeId  String?   @map("metropolitan_see_id")
+  isMetropolitan     Boolean   @default(false) @map("is_metropolitan")
+  dateErected        DateTime? @map("date_erected") @db.Date
+  dateSuppressed     DateTime? @map("date_suppressed") @db.Date
+  cathedralName      String?   @map("cathedral_name") @db.VarChar(200)
+  coCathedralName    String?   @map("co_cathedral_name") @db.VarChar(200)
+  cathedralAddress   String?   @map("cathedral_address") @db.VarChar(300)
+  cathedralLatitude  Decimal?  @map("cathedral_latitude") @db.Decimal(9, 6)
+  cathedralLongitude Decimal?  @map("cathedral_longitude") @db.Decimal(9, 6)
+  coatOfArmsUrl      String?   @map("coat_of_arms_url") @db.VarChar(500)
+  wikidataId         String?   @unique @map("wikidata_id") @db.VarChar(20)
+  patronSaint        String?   @map("patron_saint") @db.VarChar(200)
+  cathedralDedication String?  @map("cathedral_dedication") @db.VarChar(200)
+  catholicPopulation Int?      @map("catholic_population")
+  totalPopulation    Int?      @map("total_population")
+  numParishes        Int?      @map("num_parishes")
+  squareMiles        Int?      @map("square_miles")
+  isUsccbTerritory   Boolean?  @default(false) @map("is_usccb_territory")
+  area               Float?    @map("area") @db.DoublePrecision
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
+
+  rite            Rite     @relation(fields: [riteId], references: [id])
+  country         Country? @relation(fields: [countryId], references: [id])
+  metropolitanSee See?     @relation("SeeProvince", fields: [metropolitanSeeId], references: [id])
+  suffraganSees   See[]    @relation("SeeProvince")
+
+  nameHistory                    SeeNameHistory[]
+  assignments                    Assignment[]
+  statistics                     DioceseStatistics[]
+  dioceseCounties                DioceseCounty[]
+  incardinationOrdinations PriesthoodOrdination[] @relation("IncardinationSee")
+  ordinationOrdinations    PriesthoodOrdination[] @relation("OrdinationSee")
+
+  @@index([metropolitanSeeId], map: "idx_see_metropolitan")
+  @@index([countryId], map: "idx_see_country")
+  @@map("see")
+}
+
+model SeeNameHistory {
+  id         String    @id @default(uuid())
+  seeId      String    @map("see_id")
+  formerName String    @map("former_name") @db.VarChar(200)
+  startDate  DateTime? @map("start_date") @db.Date
+  endDate    DateTime? @map("end_date") @db.Date
+
+  see See @relation(fields: [seeId], references: [id])
+
+  @@map("see_name_history")
+}
+
+// ---------------------------------------------------------------------------
+// Assignment (person ↔ see with role + date range)
+// ---------------------------------------------------------------------------
+
+model Assignment {
+  id            String    @id @default(uuid())
+  personId      String    @map("person_id")
+  seeId         String    @map("see_id")
+  role          String    @db.VarChar(50)
+  titleOverride String?   @map("title_override") @db.VarChar(200)
+  startDate     DateTime  @map("start_date") @db.Date
+  installedDate DateTime? @map("installed_date") @db.Date
+  endDate       DateTime? @map("end_date") @db.Date
+  startReason    String    @map("start_reason") @db.VarChar(50)
+  endReason      String?   @map("end_reason") @db.VarChar(50)
+  appointingPope String?   @map("appointing_pope") @db.VarChar(50)
+  isCurrent      Boolean   @map("is_current")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  person Person @relation(fields: [personId], references: [id])
+  see    See    @relation(fields: [seeId], references: [id])
+
+  @@index([personId], map: "idx_assignment_person")
+  @@index([seeId], map: "idx_assignment_see")
+  // idx_assignment_current is a partial index applied via raw SQL in the migration:
+  //   CREATE INDEX idx_assignment_current ON assignment (see_id, person_id) WHERE is_current = true
+  @@map("assignment")
+}
+
+// ---------------------------------------------------------------------------
+// Episcopal Consecration
+// ---------------------------------------------------------------------------
+
+model EpiscopalConsecration {
+  id                     String    @id @default(uuid())
+  personId               String    @map("person_id")
+  date                   DateTime  @db.Date
+  location               String?   @db.VarChar(200)
+  principalConsecratorId String?   @map("principal_consecrator_id")
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  person               Person  @relation("PersonConsecrated", fields: [personId], references: [id])
+  principalConsecrator Person? @relation("PrincipalConsecrator", fields: [principalConsecratorId], references: [id])
+
+  coConsecrators EpiscopalConsecrationCoConsecrator[]
+
+  @@index([personId], map: "idx_consecration_person")
+  @@index([principalConsecratorId], map: "idx_consecration_principal")
+  @@map("episcopal_consecration")
+}
+
+model EpiscopalConsecrationCoConsecrator {
+  id               String @id @default(uuid())
+  consecrationId   String @map("consecration_id")
+  coConsecratorId  String @map("co_consecrator_id")
+  ordinal          Int
+
+  consecration  EpiscopalConsecration @relation(fields: [consecrationId], references: [id])
+  coConsecrator Person                @relation("CoConsecrator", fields: [coConsecratorId], references: [id])
+
+  @@map("episcopal_consecration_co_consecrator")
+}
+
+// ---------------------------------------------------------------------------
+// Priesthood Ordination
+// ---------------------------------------------------------------------------
+
+model PriesthoodOrdination {
+  id                             String    @id @default(uuid())
+  personId                       String    @unique @map("person_id")
+  date                           DateTime  @db.Date
+  location                       String?   @db.VarChar(200)
+  ordainingBishopId              String?   @map("ordaining_bishop_id")
+  incardinationSeeId             String?   @map("incardination_see_id")
+  ordinationSeeId                String?   @map("ordination_see_id")
+  religiousInstituteAtOrdination String?   @map("religious_institute_at_ordination") @db.VarChar(200)
+  createdAt                      DateTime  @default(now()) @map("created_at")
+  updatedAt                      DateTime  @updatedAt @map("updated_at")
+
+  person           Person  @relation("PersonOrdained", fields: [personId], references: [id])
+  ordainingBishop  Person? @relation("OrdainingBishop", fields: [ordainingBishopId], references: [id])
+  incardinationSee See?    @relation("IncardinationSee", fields: [incardinationSeeId], references: [id])
+  ordinationSee    See?    @relation("OrdinationSee", fields: [ordinationSeeId], references: [id])
+
+  @@map("priesthood_ordination")
+}
+
+// ---------------------------------------------------------------------------
+// Cardinalate
+// ---------------------------------------------------------------------------
+
+model Cardinalate {
+  id            String   @id @default(uuid())
+  personId      String   @unique @map("person_id")
+  dateCreated   DateTime @map("date_created") @db.Date
+  cardinalOrder String   @map("cardinal_order") @db.VarChar(20) // 'deacon', 'priest', 'bishop'
+  titularChurch String?  @map("titular_church") @db.VarChar(200)
+  isElector     Boolean  @map("is_elector")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  person Person @relation(fields: [personId], references: [id])
+
+  @@map("cardinalate")
+}
+
+// ---------------------------------------------------------------------------
+// Diocese County (FIPS mapping for geographic boundaries)
+// ---------------------------------------------------------------------------
+
+model DioceseCounty {
+  id          String @id @default(uuid())
+  seeId       String @map("see_id")
+  countyFips  String @map("county_fips") @db.VarChar(5)
+  stateFips   String @map("state_fips") @db.VarChar(2)
+  countyName  String @map("county_name") @db.VarChar(100)
+  stateName   String @map("state_name") @db.VarChar(50)
+
+  see See @relation(fields: [seeId], references: [id])
+
+  @@index([seeId], map: "idx_diocese_county_see")
+  @@index([countyFips], map: "idx_diocese_county_fips")
+  @@map("diocese_county")
+}
+
+// ---------------------------------------------------------------------------
+// Source Citation (polymorphic provenance tracking)
+// ---------------------------------------------------------------------------
+
+model SourceCitation {
+  id           String    @id @default(uuid())
+  entityType   String    @map("entity_type") @db.VarChar(50)
+  entityId     String    @map("entity_id")
+  sourceType   String    @map("source_type") @db.VarChar(50)
+  sourceDetail String    @map("source_detail") @db.Text
+  accessedDate DateTime? @map("accessed_date") @db.Date
+  notes        String?   @db.Text
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@index([entityType, entityId], map: "idx_source_citation_entity")
+  @@map("source_citation")
+}
+
+// ---------------------------------------------------------------------------
+// NOTE: Two indexes require raw SQL and must be applied in a migration:
+//
+// ---------------------------------------------------------------------------
+// Education (replaces seminary + educationNotes on Person)
+// ---------------------------------------------------------------------------
+
+model Education {
+  id           String  @id @default(uuid())
+  personId     String  @map("person_id")
+  institution  String  @db.VarChar(200)
+  degree       String? @db.VarChar(100)
+  fieldOfStudy String? @map("field_of_study") @db.VarChar(100)
+  startYear    Int?    @map("start_year")
+  endYear      Int?    @map("end_year")
+  ordinal      Int     @default(0)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  person Person @relation(fields: [personId], references: [id])
+
+  @@index([personId], map: "idx_education_person")
+  @@map("education")
+}
+
+// ---------------------------------------------------------------------------
+// Vatican Events (ad limina, conclaves, consistories, synods, councils)
+// ---------------------------------------------------------------------------
+
+model VaticanEvent {
+  id           String    @id @default(uuid())
+  personId     String    @map("person_id")
+  eventType    String    @map("event_type") @db.VarChar(50)
+  eventDate    DateTime  @map("event_date") @db.Date
+  eventEndDate DateTime? @map("event_end_date") @db.Date
+  description  String?   @db.VarChar(500)
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  person Person @relation(fields: [personId], references: [id])
+
+  @@index([personId], map: "idx_vatican_event_person")
+  @@map("vatican_event")
+}
+
+// ---------------------------------------------------------------------------
+// Diocese Statistics (annual data)
+// ---------------------------------------------------------------------------
+
+model DioceseStatistics {
+  id                 String   @id @default(uuid())
+  seeId              String   @map("see_id")
+  year               Int
+  catholicPopulation Int?     @map("catholic_population")
+  totalPopulation    Int?     @map("total_population")
+  numParishes        Int?     @map("num_parishes")
+  numPriests         Int?     @map("num_priests")
+  numDeacons         Int?     @map("num_deacons")
+  numReligious       Int?     @map("num_religious")
+  source             String?  @db.VarChar(300)
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  see See @relation(fields: [seeId], references: [id])
+
+  @@unique([seeId, year], map: "uq_diocese_statistics_see_year")
+  @@map("diocese_statistics")
+}
+
+// Partial index (not expressible in Prisma DSL):
+//   CREATE UNIQUE INDEX idx_assignment_current
+//     ON assignment(is_current) WHERE is_current = true;
+//
+// GIN full-text search indexes:
+//   CREATE INDEX idx_person_search ON person USING gin(
+//     to_tsvector('english', first_name || ' ' || coalesce(middle_name, '') || ' ' || last_name)
+//   );
+//   CREATE INDEX idx_see_search ON see USING gin(
+//     to_tsvector('english', name)
+//   );
+// ---------------------------------------------------------------------------
