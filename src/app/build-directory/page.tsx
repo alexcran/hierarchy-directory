@@ -671,9 +671,9 @@ export default function BuildDirectoryPage() {
   useEffect(() => {
     if (!ready) return
     if (initialized.current) return
-    initialized.current = true
     const ids = Array.from(selectedIds)
     if (ids.length === 0) { setLoadingBishops(false); return }
+    initialized.current = true
     fetch(`/api/bishops/batch?ids=${ids.join(',')}`)
       .then((r) => r.json())
       .then((data: BishopEntry[]) => setBishops(data))
