@@ -1,10 +1,13 @@
 'use client'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useSelection } from '@/contexts/SelectionContext'
 
 export function SelectionBar() {
   const { count, clear } = useSelection()
-  if (count === 0) return null
+  const pathname = usePathname()
+
+  if (count === 0 || pathname.startsWith('/build-directory')) return null
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-border shadow-lg">

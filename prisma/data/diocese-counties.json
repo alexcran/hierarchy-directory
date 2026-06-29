@@ -1,0 +1,31 @@
+[
+  {
+    "_note": "see_name must match the value in the see.name column exactly (place name only, e.g. 'Baltimore' not 'Archdiocese of Baltimore'). The complete list of US Latin-rite diocese names and territories can be compiled from the Official Catholic Directory (published annually by P.J. Kenedy & Sons) or from the USCCB member diocese list at usccb.org/about/leadership/bishops. County FIPS codes follow the Census Bureau standard: 2-digit state + 3-digit county, zero-padded to 5 digits total. A complete list of all US county FIPS codes is available at census.gov/library/reference/code-lists/ansi.html",
+    "see_name": "__INSTRUCTIONS__",
+    "counties": []
+  },
+  {
+    "see_name": "Baltimore",
+    "counties": [
+      { "fips": "24510", "county_name": "Baltimore City", "state_name": "Maryland", "state_fips": "24" },
+      { "fips": "24005", "county_name": "Baltimore County", "state_name": "Maryland", "state_fips": "24" },
+      { "fips": "24003", "county_name": "Anne Arundel County", "state_name": "Maryland", "state_fips": "24" },
+      { "fips": "24013", "county_name": "Carroll County", "state_name": "Maryland", "state_fips": "24" },
+      { "fips": "24025", "county_name": "Harford County", "state_name": "Maryland", "state_fips": "24" },
+      { "fips": "24027", "county_name": "Howard County", "state_name": "Maryland", "state_fips": "24" },
+      { "fips": "24001", "county_name": "Allegany County", "state_name": "Maryland", "state_fips": "24" },
+      { "fips": "24011", "county_name": "Caroline County", "state_name": "Maryland", "state_fips": "24" },
+      { "fips": "24015", "county_name": "Cecil County", "state_name": "Maryland", "state_fips": "24" },
+      { "fips": "24019", "county_name": "Dorchester County", "state_name": "Maryland", "state_fips": "24" },
+      { "fips": "24021", "county_name": "Frederick County", "state_name": "Maryland", "state_fips": "24" },
+      { "fips": "24023", "county_name": "Garrett County", "state_name": "Maryland", "state_fips": "24" },
+      { "fips": "24029", "county_name": "Kent County", "state_name": "Maryland", "state_fips": "24" },
+      { "fips": "24035", "county_name": "Queen Anne's County", "state_name": "Maryland", "state_fips": "24" },
+      { "fips": "24039", "county_name": "Somerset County", "state_name": "Maryland", "state_fips": "24" },
+      { "fips": "24041", "county_name": "Talbot County", "state_name": "Maryland", "state_fips": "24" },
+      { "fips": "24043", "county_name": "Washington County", "state_name": "Maryland", "state_fips": "24" },
+      { "fips": "24045", "county_name": "Wicomico County", "state_name": "Maryland", "state_fips": "24" },
+      { "fips": "24047", "county_name": "Worcester County", "state_name": "Maryland", "state_fips": "24" }
+    ]
+  }
+]

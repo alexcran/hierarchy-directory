@@ -6,6 +6,8 @@ export interface BishopEntry {
   lastName: string
   portraitUrl: string | null
   isCardinal: boolean
+  cardinalDateCreated: string | null
+  cardinalRank: string | null
   // Current Role
   currentRole: string | null
   currentTitle: string | null
@@ -42,15 +44,22 @@ export interface DirectoryFields {
   episcopalConsDate: boolean
   episcopalConsLocation: boolean
   principalConsecrator: boolean
+  // Cardinal group
+  cardinalDateCreated: boolean
+  cardinalRank: boolean
   // Other group
   rite: boolean
+  religiousOrder: boolean
   education: boolean
 }
 
 export interface DirectoryConfig {
   fields: DirectoryFields
-  gridDensity: 'large' | 'medium' | 'compact'
+  gridDensity: 'large' | 'standard' | 'medium' | 'small'
   sort: 'alphabetical' | 'see' | 'seniority' | 'manual'
+  headerEnabled: boolean
+  headerTitle: string
+  headerSubtitle: string
   coverPage: boolean
   coverTitle: string
   coverSubtitle: string

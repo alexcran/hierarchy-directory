@@ -29,7 +29,7 @@ export async function GET(request: Request) {
       dateOfBirth: true,
       placeOfBirth: true,
       dateOfDeath: true,
-      cardinalate: { select: { id: true } },
+      cardinalate: { select: { id: true, dateCreated: true, cardinalOrder: true } },
       rite: { select: { name: true, type: true } },
       assignments: {
         where: { isCurrent: true },
@@ -79,6 +79,8 @@ export async function GET(request: Request) {
       lastName:             p.lastName,
       portraitUrl:          p.portraitUrl,
       isCardinal:           !!p.cardinalate,
+      cardinalDateCreated:  p.cardinalate?.dateCreated?.toISOString() ?? null,
+      cardinalRank:         p.cardinalate?.cardinalOrder ?? null,
       // Current Role
       currentRole:          asgn?.role ?? null,
       currentTitle:         asgn ? formatRoleTitle(asgn.role, asgn.role.endsWith('_emeritus') ? '' : seeName ?? '') : null,

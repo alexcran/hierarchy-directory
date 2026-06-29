@@ -23,7 +23,7 @@ const DEFAULT_CONFIG: DirectoryConfig = {
   fields: {
     // Current Role
     diocese:              true,
-    title:                false,
+    title:                true,
     styleOfAddress:       false,
     // Biographical
     dateOfBirth:          false,
@@ -32,15 +32,22 @@ const DEFAULT_CONFIG: DirectoryConfig = {
     // Ordination
     priestOrdDate:        false,
     priestOrdLocation:    false,
-    episcopalConsDate:    false,
+    episcopalConsDate:    true,
     episcopalConsLocation: false,
     principalConsecrator: false,
+    // Cardinal
+    cardinalDateCreated:  false,
+    cardinalRank:         false,
     // Other
     rite:                 false,
+    religiousOrder:       false,
     education:            false,
   },
-  gridDensity:   'medium',
+  gridDensity:   'standard',
   sort:          'alphabetical',
+  headerEnabled: true,
+  headerTitle:   'Selected Bishops',
+  headerSubtitle: '',
   coverPage:     false,
   coverTitle:    'Catholic Bishops Directory',
   coverSubtitle: 'United States',
@@ -283,77 +290,6 @@ function Step1({
 
 // ─── Step 2: Configure Layout ─────────────────────────────────────────────────
 
-function ToggleGroup<T extends string>({
-  label,
-  options,
-  value,
-  onChange,
-}: {
-  label: string
-  options: { value: T; label: string; description?: string }[]
-  value: T
-  onChange: (v: T) => void
-}) {
-  return (
-    <div>
-      <p className="font-body text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-3">
-        {label}
-      </p>
-      <div className="flex flex-wrap gap-2">
-        {options.map((opt) => (
-          <button
-            key={opt.value}
-            onClick={() => onChange(opt.value)}
-            className={`px-4 py-2 rounded-lg text-sm font-body border transition-colors ${
-              value === opt.value
-                ? 'border-burgundy bg-burgundy text-white font-medium'
-                : 'border-border text-text-primary hover:bg-surface hover:border-text-secondary'
-            }`}
-          >
-            {opt.label}
-            {opt.description && (
-              <span className={`block text-xs mt-0.5 ${value === opt.value ? 'text-white/80' : 'text-text-tertiary'}`}>
-                {opt.description}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function FieldChip({
-  label,
-  description,
-  checked,
-  onChange,
-}: {
-  label: string
-  description?: string
-  checked: boolean
-  onChange: (v: boolean) => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(!checked)}
-      className={`px-4 py-2 rounded-lg text-sm font-body border transition-colors text-left ${
-        checked
-          ? 'border-burgundy bg-burgundy text-white font-medium'
-          : 'border-border text-text-primary hover:bg-surface hover:border-text-secondary'
-      }`}
-    >
-      {label}
-      {description && (
-        <span className={`block text-xs mt-0.5 ${checked ? 'text-white/80' : 'text-text-tertiary'}`}>
-          {description}
-        </span>
-      )}
-    </button>
-  )
-}
-
 const FIELD_GROUPS: Array<{
   label: string
   fields: Array<{ key: keyof DirectoryFields; label: string; description?: string }>
@@ -361,9 +297,9 @@ const FIELD_GROUPS: Array<{
   {
     label: 'Current Role',
     fields: [
-      { key: 'diocese',        label: 'Diocese',          description: 'See name' },
-      { key: 'title',          label: 'Title',            description: 'Role + see' },
-      { key: 'styleOfAddress', label: 'Style of Address', description: 'His Eminence / Excellency' },
+      { key: 'diocese',        label: 'Diocese' },
+      { key: 'title',          label: 'Title' },
+      { key: 'styleOfAddress', label: 'Style of Address' },
     ],
   },
   {
@@ -377,23 +313,211 @@ const FIELD_GROUPS: Array<{
   {
     label: 'Ordination',
     fields: [
-      { key: 'priestOrdDate',         label: 'Priesthood Ord. Date' },
-      { key: 'priestOrdLocation',     label: 'Priesthood Ord. Location' },
+      { key: 'priestOrdDate',         label: 'Priesthood Ordination Date' },
+      { key: 'priestOrdLocation',     label: 'Priesthood Ordination Location' },
       { key: 'episcopalConsDate',     label: 'Consecration Date' },
       { key: 'episcopalConsLocation', label: 'Consecration Location' },
       { key: 'principalConsecrator',  label: 'Principal Consecrator' },
     ],
   },
   {
+    label: 'Cardinal',
+    fields: [
+      { key: 'cardinalDateCreated', label: 'Date Created Cardinal' },
+      { key: 'cardinalRank',        label: 'Cardinal Rank' },
+    ],
+  },
+  {
     label: 'Other',
     fields: [
-      { key: 'rite',      label: 'Rite',      description: 'Non-Latin rites only' },
-      { key: 'education', label: 'Education', description: 'Seminary / institutions' },
+      { key: 'rite',           label: 'Rite' },
+      { key: 'religiousOrder', label: 'Religious Order' },
+      { key: 'education',      label: 'Education' },
     ],
   },
 ]
 
-function Step2({ config, onChange }: { config: DirectoryConfig; onChange: (c: DirectoryConfig) => void }) {
+function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-3">
+      <h3 className="font-body text-xs font-semibold text-text-tertiary uppercase tracking-wide">{title}</h3>
+      {children}
+    </section>
+  )
+}
+
+function Switch({ checked, onChange, label }: { checked: boolean; onChange: (checked: boolean) => void; label: string }) {
+  return (
+    <button type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)} className="flex items-center gap-3 text-left">
+      <span className={`relative h-5 w-9 rounded-full transition-colors ${checked ? 'bg-text-primary' : 'bg-border'}`}>
+        <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-4' : 'translate-x-0.5'}`} />
+      </span>
+      <span className="font-body text-sm text-text-primary">{label}</span>
+    </button>
+  )
+}
+
+function TextInput({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string }) {
+  return (
+    <label className="block">
+      <span className="block font-body text-xs text-text-secondary mb-1.5">{label}</span>
+      <input
+        type="text"
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-3 py-2 text-sm font-body bg-white border border-border rounded-md text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-text-primary/10 focus:border-text-secondary"
+      />
+    </label>
+  )
+}
+
+function RadioGroup<T extends string>({ label, options, value, onChange }: { label: string; options: { value: T; label: string }[]; value: T; onChange: (v: T) => void }) {
+  return (
+    <SettingsSection title={label}>
+      <div className="space-y-2">
+        {options.map((opt) => (
+          <label key={opt.value} className="flex items-center gap-2.5 font-body text-sm text-text-primary">
+            <input type="radio" checked={value === opt.value} onChange={() => onChange(opt.value)} className="h-4 w-4 accent-burgundy" />
+            <span className={value === opt.value ? 'font-medium' : ''}>{opt.label}</span>
+          </label>
+        ))}
+      </div>
+    </SettingsSection>
+  )
+}
+
+function FieldCheckbox({ label, checked, disabled, onChange }: { label: string; checked: boolean; disabled?: boolean; onChange?: (checked: boolean) => void }) {
+  return (
+    <label className={`flex items-center gap-2.5 font-body text-sm ${disabled ? 'text-text-tertiary' : 'text-text-primary'}`}>
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange?.(e.target.checked)}
+        className="h-4 w-4 rounded border-border accent-burgundy disabled:accent-text-tertiary"
+      />
+      <span>{label}</span>
+    </label>
+  )
+}
+
+function formatPreviewDate(iso: string | null | undefined, prefix = ''): string | null {
+  if (!iso) return null
+  const date = new Date(iso)
+  const formatted = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+  return prefix ? `${prefix} ${formatted}` : formatted
+}
+
+function formatDensityLabel(density: DirectoryConfig['gridDensity']): string {
+  const labels: Record<DirectoryConfig['gridDensity'], string> = {
+    large: 'Large (3 across)',
+    standard: 'Standard (3x3)',
+    medium: 'Medium (4x4)',
+    small: 'Small (5x5)',
+  }
+  return labels[density]
+}
+
+function formatCardinalRank(rank: string | null | undefined): string | null {
+  if (!rank) return null
+  const labels: Record<string, string> = {
+    bishop: 'Cardinal Bishop',
+    priest: 'Cardinal Priest',
+    deacon: 'Cardinal Deacon',
+  }
+  return labels[rank] ?? rank
+}
+
+function SampleEntryPreview({ bishops, config }: { bishops: BishopEntry[]; config: DirectoryConfig }) {
+  const bishop = bishops.find((b) => b.portraitUrl) ?? bishops[0]
+  const size = {
+    large:   { card: 210, portraitW: 168, portraitH: 224, name: 'text-lg', meta: 'text-[13px]', small: 'text-xs' },
+    standard:{ card: 185, portraitW: 132, portraitH: 176, name: 'text-base', meta: 'text-xs', small: 'text-[11px]' },
+    medium:  { card: 150, portraitW: 90,  portraitH: 120, name: 'text-sm', meta: 'text-[11px]', small: 'text-[10px]' },
+    small:   { card: 118, portraitW: 64,  portraitH: 85,  name: 'text-xs', meta: 'text-[10px]', small: 'text-[9px]' },
+  }[config.gridDensity]
+  const rankColor = bishop?.isCardinal ? '#C41E3A' : '#007A00'
+  const fallbackName = bishop?.displayName ?? 'Sample Bishop'
+  const initials = fallbackName.split(' ').filter(Boolean).map((part) => part[0]).join('').slice(0, 2)
+  const lines: Array<{ text: string | null | undefined; kind?: 'primary' | 'secondary' | 'italic' }> = [
+    config.fields.title ? { text: bishop?.currentTitle, kind: 'primary' } : { text: null },
+    config.fields.diocese ? { text: bishop?.currentSee, kind: 'primary' } : { text: null },
+    config.fields.dateOfBirth ? { text: formatPreviewDate(bishop?.dateOfBirth, 'b.'), kind: 'secondary' } : { text: null },
+    config.fields.placeOfBirth ? { text: bishop?.placeOfBirth, kind: 'secondary' } : { text: null },
+    config.fields.dateOfDeath ? { text: formatPreviewDate(bishop?.dateOfDeath, 'd.'), kind: 'secondary' } : { text: null },
+    config.fields.priestOrdDate ? { text: formatPreviewDate(bishop?.priestOrdDate, 'Ord.'), kind: 'secondary' } : { text: null },
+    config.fields.priestOrdLocation ? { text: bishop?.priestOrdLocation, kind: 'secondary' } : { text: null },
+    config.fields.episcopalConsDate ? { text: formatPreviewDate(bishop?.episcopalConsDate, 'Cons.'), kind: 'secondary' } : { text: null },
+    config.fields.episcopalConsLocation ? { text: bishop?.episcopalConsLocation, kind: 'secondary' } : { text: null },
+    config.fields.principalConsecrator ? { text: bishop?.principalConsecrator ? `by ${bishop.principalConsecrator}` : null, kind: 'italic' } : { text: null },
+    config.fields.cardinalDateCreated ? { text: formatPreviewDate(bishop?.cardinalDateCreated, 'Cardinal'), kind: 'secondary' } : { text: null },
+    config.fields.cardinalRank ? { text: formatCardinalRank(bishop?.cardinalRank), kind: 'secondary' } : { text: null },
+    config.fields.rite && bishop?.rite !== 'Latin' ? { text: bishop?.rite, kind: 'secondary' } : { text: null },
+    config.fields.religiousOrder ? { text: bishop?.religiousOrder, kind: 'secondary' } : { text: null },
+    config.fields.education ? { text: bishop?.education, kind: 'secondary' } : { text: null },
+  ]
+
+  return (
+    <div className="border border-border bg-white rounded-md p-5 lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto">
+      <p className="font-body text-xs font-semibold text-text-tertiary uppercase tracking-wide mb-5">Preview</p>
+      <div className="flex justify-center">
+        <div className="text-center" style={{ width: size.card }}>
+          <div className="mx-auto overflow-hidden bg-surface" style={{ width: size.portraitW, height: size.portraitH + 4 }}>
+            {bishop?.portraitUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={bishop.portraitUrl} alt="" className="block w-full object-cover object-top" style={{ height: size.portraitH }} />
+            ) : (
+              <div className="flex items-center justify-center bg-surface text-text-tertiary font-body font-semibold uppercase" style={{ width: size.portraitW, height: size.portraitH }}>
+                {initials}
+              </div>
+            )}
+            <div style={{ height: 4, backgroundColor: rankColor }} />
+          </div>
+          {config.fields.styleOfAddress && bishop?.styleOfAddress && (
+            <p className={`${size.small} font-body italic mt-2 leading-tight`} style={{ color: rankColor }}>{bishop.styleOfAddress}</p>
+          )}
+          <p className={`${size.name} font-display font-semibold text-text-primary mt-1 leading-tight`}>{fallbackName}</p>
+          <div className="mt-1 space-y-0.5">
+            {lines.filter((line) => line.text).map((line, idx) => (
+              <p
+                key={`${line.text}-${idx}`}
+                className={`font-body leading-tight ${
+                  line.kind === 'primary' ? `${size.meta} text-text-secondary` :
+                  line.kind === 'italic'  ? `${size.small} text-text-tertiary italic` :
+                                             `${size.small} text-text-tertiary`
+                }`}
+              >
+                {line.text}
+              </p>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ToggleGroup<T extends string>({ label, options, value, onChange }: { label: string; options: { value: T; label: string; description?: string }[]; value: T; onChange: (v: T) => void }) {
+  return (
+    <RadioGroup
+      label={label}
+      value={value}
+      onChange={onChange}
+      options={options.map(({ value, label, description }) => ({
+        value,
+        label: description ? `${label}, ${description}` : label,
+      }))}
+    />
+  )
+}
+
+function FieldChip({ label, checked, onChange }: { label: string; description?: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return <FieldCheckbox label={label} checked={checked} onChange={onChange} />
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function OldStep2({ config, onChange }: { config: DirectoryConfig; onChange: (c: DirectoryConfig) => void }) {
   function set<K extends keyof DirectoryConfig>(key: K, value: DirectoryConfig[K]) {
     onChange({ ...config, [key]: value })
   }
@@ -401,8 +525,9 @@ function Step2({ config, onChange }: { config: DirectoryConfig; onChange: (c: Di
     set('fields', { ...config.fields, [key]: value })
   }
 
-  const optionalCount = Object.values(config.fields).filter(Boolean).length
-  const showWarning = optionalCount > 5 && config.gridDensity !== 'large'
+  const selectedFieldCount = Object.values(config.fields).filter(Boolean).length + 2
+  const optionalCount = selectedFieldCount - 2
+  const showWarning = optionalCount > 5 && (config.gridDensity === 'medium' || config.gridDensity === 'small')
 
   return (
     <div className="space-y-8">
@@ -458,7 +583,7 @@ function Step2({ config, onChange }: { config: DirectoryConfig; onChange: (c: Di
             <span className="flex-shrink-0 mt-0.5">⚠</span>
             <span>
               Many fields selected — entries may be small at this grid density.
-              Consider using <button className="font-semibold underline" onClick={() => set('gridDensity', 'large')}>Large (3 per row)</button> for readability.
+              Consider using <button className="font-semibold underline" onClick={() => set('gridDensity', 'standard')}>Standard (3x3)</button> for readability.
             </span>
           </div>
         )}
@@ -469,9 +594,10 @@ function Step2({ config, onChange }: { config: DirectoryConfig; onChange: (c: Di
         value={config.gridDensity}
         onChange={(v) => set('gridDensity', v)}
         options={[
-          { value: 'large',   label: 'Large',   description: '3 per row' },
-          { value: 'medium',  label: 'Medium',  description: '4 per row' },
-          { value: 'compact', label: 'Compact', description: '6 per row' },
+          { value: 'large',    label: 'Large',    description: '3 across' },
+          { value: 'standard', label: 'Standard', description: '3x3' },
+          { value: 'medium',   label: 'Medium',   description: '4x4' },
+          { value: 'small',    label: 'Small',    description: '5x5' },
         ]}
       />
 
@@ -547,6 +673,116 @@ function Step2({ config, onChange }: { config: DirectoryConfig; onChange: (c: Di
 
 // ─── Step 3: Preview ──────────────────────────────────────────────────────────
 
+function Step2({ bishops, config, onChange }: { bishops: BishopEntry[]; config: DirectoryConfig; onChange: (c: DirectoryConfig) => void }) {
+  function set<K extends keyof DirectoryConfig>(key: K, value: DirectoryConfig[K]) {
+    onChange({ ...config, [key]: value })
+  }
+  function setField<K extends keyof DirectoryFields>(key: K, value: boolean) {
+    set('fields', { ...config.fields, [key]: value })
+  }
+
+  const selectedFieldCount = Object.values(config.fields).filter(Boolean).length + 2
+  const optionalCount = selectedFieldCount - 2
+  const showWarning = optionalCount > 5 && (config.gridDensity === 'medium' || config.gridDensity === 'small')
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-display text-2xl font-semibold text-text-primary">Configure Layout</h2>
+        <p className="font-body text-sm text-text-secondary mt-1">Choose the document structure and see one representative entry.</p>
+      </div>
+
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <div className="space-y-8">
+          <SettingsSection title="Header">
+            <Switch checked={config.headerEnabled} onChange={(checked) => set('headerEnabled', checked)} label={config.headerEnabled ? 'On' : 'Off'} />
+            {config.headerEnabled && (
+              <div className="space-y-3 pt-1">
+                <TextInput label="Header title" value={config.headerTitle} onChange={(value) => set('headerTitle', value)} placeholder="Selected Bishops" />
+                <TextInput label="Subtitle" value={config.headerSubtitle} onChange={(value) => set('headerSubtitle', value)} />
+              </div>
+            )}
+          </SettingsSection>
+
+          <SettingsSection title="Included Fields">
+            <div className="space-y-5">
+              <div>
+                <p className="font-body text-xs text-text-tertiary mb-2">Always included</p>
+                <div className="space-y-2">
+                  <FieldCheckbox label="Portrait" checked disabled />
+                  <FieldCheckbox label="Name" checked disabled />
+                </div>
+              </div>
+
+              {FIELD_GROUPS.map((group) => (
+                <div key={group.label}>
+                  <p className="font-body text-xs text-text-tertiary mb-2">{group.label}</p>
+                  <div className="space-y-2">
+                    {group.fields.map(({ key, label }) => (
+                      <FieldCheckbox key={key} label={label} checked={config.fields[key]} onChange={(checked) => setField(key, checked)} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              <p className="font-body text-sm text-text-secondary">{selectedFieldCount} fields selected</p>
+              <p className="font-body text-xs text-text-tertiary">
+                Some selected fields may not appear for every bishop. A field is included only when that information is available.
+              </p>
+
+              {showWarning && (
+                <p className="font-body text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                  Many fields selected. Standard or Large density will give entries more room.
+                </p>
+              )}
+            </div>
+          </SettingsSection>
+
+          <RadioGroup
+            label="Grid Density"
+            value={config.gridDensity}
+            onChange={(v) => set('gridDensity', v)}
+            options={[
+              { value: 'large',    label: 'Large, 3 across' },
+              { value: 'standard', label: 'Standard, 3x3' },
+              { value: 'medium',   label: 'Medium, 4x4' },
+              { value: 'small',    label: 'Small, 5x5' },
+            ]}
+          />
+
+          <RadioGroup
+            label="Sort Order"
+            value={config.sort}
+            onChange={(v) => set('sort', v)}
+            options={[
+              { value: 'alphabetical', label: 'Alphabetical' },
+              { value: 'see',          label: 'By See' },
+              { value: 'seniority',    label: 'By Seniority' },
+              { value: 'manual',       label: 'Manual' },
+            ]}
+          />
+
+          <RadioGroup
+            label="Page Size"
+            value={config.pageSize}
+            onChange={(v) => set('pageSize', v)}
+            options={[
+              { value: 'letter', label: 'US Letter' },
+              { value: 'a4',     label: 'A4' },
+            ]}
+          />
+
+          <SettingsSection title="Cover Page">
+            <Switch checked={config.coverPage} onChange={(checked) => set('coverPage', checked)} label={config.coverPage ? 'On' : 'Off'} />
+          </SettingsSection>
+        </div>
+
+        <SampleEntryPreview bishops={bishops} config={config} />
+      </div>
+    </div>
+  )
+}
+
 function PdfLoading() {
   return (
     <div className="flex items-center justify-center h-[600px] bg-surface rounded-lg border border-border">
@@ -563,7 +799,7 @@ function Step3({ bishops, config, generatedDate, logoSrc }: { bishops: BishopEnt
     <div className="space-y-4">
       <h2 className="font-display text-xl font-semibold text-text-primary">Preview</h2>
       <p className="font-body text-sm text-text-secondary">
-        {bishops.length} {bishops.length === 1 ? 'bishop' : 'bishops'} · {config.gridDensity} density
+        {bishops.length} {bishops.length === 1 ? 'bishop' : 'bishops'} · {formatDensityLabel(config.gridDensity)}
       </p>
       <div className="w-full rounded-lg overflow-hidden border border-border">
         <PDFViewer width="100%" height={680} showToolbar={false}>
@@ -612,11 +848,12 @@ function Step4({ bishops, config, generatedDate, logoSrc }: { bishops: BishopEnt
               const on = Object.values(config.fields).filter(Boolean).length
               return on === 0 ? 'Name only' : `${on} optional field${on !== 1 ? 's' : ''}`
             })()],
-            ['Density',    `${config.gridDensity} (${config.gridDensity === 'large' ? 3 : config.gridDensity === 'medium' ? 4 : 6}/row)`],
+            ['Density',    formatDensityLabel(config.gridDensity)],
             ['Sort',       config.sort],
             ['Page size',  config.pageSize === 'letter' ? 'US Letter' : 'A4'],
+            ['Header',     config.headerEnabled ? config.headerTitle || 'Selected Bishops' : 'Off'],
             ['Cover page', config.coverPage ? 'Yes' : 'No'],
-            ['Generated',  generatedDate],
+            ['Created',    generatedDate],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between text-sm font-body">
               <span className="text-text-secondary">{k}</span>
@@ -694,13 +931,21 @@ export default function BuildDirectoryPage() {
     if (!selectedIds.has(b.id)) toggle(b.id)
   }, [selectedIds, toggle])
 
+  const clearSelection = useCallback(() => {
+    bishops.forEach((bishop) => {
+      if (selectedIds.has(bishop.id)) toggle(bishop.id)
+    })
+    setBishops([])
+    setStep(1)
+  }, [bishops, selectedIds, toggle])
+
   const canAdvance =
     (step === 1 && bishops.length > 0) ||
     step === 2 ||
     step === 3
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-8 pb-24">
+    <div className="max-w-5xl mx-auto px-6 py-8 pb-10">
       <div className="mb-6">
         <h1 className="font-display text-3xl sm:text-4xl font-semibold text-text-primary leading-tight">
           Build a Directory
@@ -729,31 +974,47 @@ export default function BuildDirectoryPage() {
             ))}
           </div>
         )}
-        {step === 2 && <Step2 config={config} onChange={setConfig} />}
+        {step === 2 && <Step2 bishops={bishops} config={config} onChange={setConfig} />}
         {step === 3 && <Step3 bishops={bishops} config={config} generatedDate={generatedDate} logoSrc={logoSrc} />}
         {step === 4 && <Step4 bishops={bishops} config={config} generatedDate={generatedDate} logoSrc={logoSrc} />}
       </div>
 
-      {/* Navigation buttons */}
-      <div className="flex items-center justify-between mt-8 pt-6 border-t border-border">
-        <button
-          onClick={() => setStep((s) => Math.max(1, s - 1) as Step)}
-          disabled={step === 1}
-          className="px-5 py-2.5 text-sm font-body font-medium border border-border rounded-lg text-text-primary hover:bg-surface transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-        >
-          Back
-        </button>
+      <div className="mt-8 pt-5 border-t border-border bg-background">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <p className="font-body text-sm text-text-secondary">
+              <span className="font-medium text-text-primary">{bishops.length}</span> selected
+            </p>
+            <button
+              onClick={clearSelection}
+              disabled={bishops.length === 0}
+              className="font-body text-sm text-text-secondary hover:text-text-primary disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Clear selection
+            </button>
+          </div>
 
-        {step < 4 && (
-          <button
-            onClick={() => setStep((s) => Math.min(4, s + 1) as Step)}
-            disabled={!canAdvance}
-            className="flex items-center gap-2 px-5 py-2.5 text-sm font-body font-semibold bg-burgundy text-white rounded-lg hover:bg-burgundy-hover transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            {step === 3 ? 'Continue to Export' : 'Next'}
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        )}
+          <div className="flex items-center justify-between gap-3 sm:justify-end">
+            <button
+              onClick={() => setStep((s) => Math.max(1, s - 1) as Step)}
+              disabled={step === 1}
+              className="px-5 py-2.5 text-sm font-body font-medium border border-border rounded-lg text-text-primary hover:bg-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              Back
+            </button>
+
+            {step < 4 && (
+              <button
+                onClick={() => setStep((s) => Math.min(4, s + 1) as Step)}
+                disabled={!canAdvance}
+                className="flex items-center gap-2 px-5 py-2.5 text-sm font-body font-semibold bg-burgundy text-white rounded-lg hover:bg-burgundy-hover transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                {step === 3 ? 'Continue to Export' : 'Next'}
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )
