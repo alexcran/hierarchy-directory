@@ -1,4 +1,7 @@
 User-agent: *
 Allow: /
 Disallow: /admin
-Disallow: /api/admin
+Disallow: /api/
+Disallow: /browse/
+
+Sitemap: https://hierarchy.directory/sitemap.xml

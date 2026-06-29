@@ -11,12 +11,21 @@ import type { FilterOptions } from '@/components/filters/FilterPanel'
 import { BishopCardSkeleton } from '@/components/ui/Skeleton'
 
 const SORT_OPTIONS = [
-  { value: 'recently_appointed', label: 'Recently Appointed' },
+  { value: 'appointment_date', label: 'Appointment Date' },
   { value: 'last_name', label: 'Last name' },
   { value: 'see', label: 'See' },
   { value: 'consecration_date', label: 'Consecration date' },
   { value: 'age', label: 'Age' },
 ]
+
+// When switching to a sort key, this is the natural default direction
+const SORT_DEFAULT_DIR: Record<string, 'asc' | 'desc'> = {
+  appointment_date: 'desc',
+  last_name: 'asc',
+  see: 'asc',
+  consecration_date: 'asc',
+  age: 'asc',
+}
 
 function BishopsPageContent() {
   const { filters, setFilters, clearAll, hasActiveFilters } = useFilters()
@@ -61,7 +70,8 @@ function BishopsPageContent() {
       if (filters.consecratedBefore)       params.set('consecrated_before',   filters.consecratedBefore)
       if (filters.ordinationAfter)         params.set('ordination_after',     filters.ordinationAfter)
       if (filters.ordinationBefore)        params.set('ordination_before',    filters.ordinationBefore)
-      if (filters.sort && filters.sort !== 'recently_appointed') params.set('sort', filters.sort)
+      if (filters.sort && filters.sort !== 'appointment_date') params.set('sort', filters.sort)
+      params.set('dir', filters.dir || 'desc')
       if (filters.page > 1)                params.set('page',                 String(filters.page))
       params.set('per_page', '48')
 
@@ -85,6 +95,7 @@ function BishopsPageContent() {
 
   return (
     <div className="max-w-content mx-auto px-6 py-6 pb-24">
+      <h1 className="sr-only">Catholic Bishops of the United States</h1>
       <div className="flex gap-8">
         {/* Sidebar — hidden on mobile */}
         <aside className="hidden md:block w-60 flex-shrink-0">
@@ -132,15 +143,33 @@ function BishopsPageContent() {
               </span>
             </div>
 
-            <select
-              value={filters.sort}
-              onChange={e => setFilters({ sort: e.target.value })}
-              className="text-sm font-body text-text-primary bg-white border border-border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-burgundy/30 focus:border-burgundy"
-            >
-              {SORT_OPTIONS.map(o => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
+            <div className="flex items-center gap-1.5">
+              <select
+                value={filters.sort}
+                onChange={e => {
+                  const newSort = e.target.value
+                  setFilters({ sort: newSort, dir: SORT_DEFAULT_DIR[newSort] ?? 'asc' })
+                }}
+                className="text-sm font-body text-text-primary bg-white border border-border rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-burgundy/30 focus:border-burgundy"
+              >
+                {SORT_OPTIONS.map(o => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+              <button
+                onClick={() => setFilters({ dir: filters.dir === 'desc' ? 'asc' : 'desc' })}
+                aria-label={filters.dir === 'desc' ? 'Sort descending' : 'Sort ascending'}
+                className="p-1.5 border border-border rounded-lg text-text-secondary hover:text-text-primary hover:bg-surface transition-colors flex-shrink-0"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                  {filters.dir === 'desc' ? (
+                    <path d="M7 2v10M3 8l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  ) : (
+                    <path d="M7 12V2M3 6l4-4 4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  )}
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Active filter chips */}

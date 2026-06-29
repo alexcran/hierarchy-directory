@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import prisma from '@/lib/prisma'
 import { formatSeeName } from '@/lib/utils/formatSeeName'
@@ -8,6 +9,17 @@ import { ORDINARY_ROLES } from '@/lib/utils/roles'
 import { DiocesesClient, type DioceseEntry } from './DiocesesClient'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata: Metadata = {
+  title: 'Catholic Dioceses of the United States',
+  description: 'Browse the dioceses and archdioceses of the United States Catholic Church, organized by province, state, and rite. Includes Eastern Catholic eparchies and apostolic exarchates.',
+  alternates: { canonical: 'https://hierarchy.directory/dioceses' },
+  openGraph: {
+    title: 'Catholic Dioceses of the United States | Hierarchy.Directory',
+    description: 'Browse the dioceses and archdioceses of the United States Catholic Church, organized by province, state, and rite.',
+    url: 'https://hierarchy.directory/dioceses',
+  },
+}
 
 export default async function DiocesesPage() {
   const sees = await prisma.see.findMany({

@@ -31,11 +31,14 @@ export async function GET(request: Request) {
       ordinationBefore:  toYear(searchParams.get('ordination_before')),
     }
 
-    const sort    = (searchParams.get('sort') ?? 'recently_appointed') as BishopSort
+    const sortParam = searchParams.get('sort') ?? 'appointment_date'
+    // backward-compat: old 'recently_appointed' param maps to 'appointment_date'
+    const sort = (sortParam === 'recently_appointed' ? 'appointment_date' : sortParam) as BishopSort
+    const dir  = (searchParams.get('dir') === 'asc' ? 'asc' : 'desc') as 'asc' | 'desc'
     const page    = Math.max(1, Number(searchParams.get('page')     ?? '1'))
     const perPage = Math.min(200, Math.max(1, Number(searchParams.get('per_page') ?? '48')))
 
-    const result = await getBishops(filters, sort, page, perPage)
+    const result = await getBishops(filters, sort, page, perPage, dir)
     return NextResponse.json(result)
   } catch (err) {
     console.error('[GET /api/bishops]', err)

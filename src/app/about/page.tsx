@@ -3,8 +3,9 @@ import Link from 'next/link'
 import { WeightParade } from './WeightParade'
 
 export const metadata: Metadata = {
-  title: 'About — Hierarchy.Directory',
-  description: 'About Hierarchy.Directory — an independent visual directory of the Catholic hierarchy.',
+  title: 'About',
+  description: 'Hierarchy.Directory is an independent visual directory of the Catholic hierarchy — visualizing the bishops and dioceses of the United States with historical data and apostolic lineage.',
+  alternates: { canonical: '/about' },
 }
 
 export default function AboutPage() {

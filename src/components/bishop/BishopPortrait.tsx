@@ -51,7 +51,7 @@ export function BishopPortrait({
         <div className="absolute left-0 right-0 top-0 overflow-hidden" style={{ height }}>
           <Image
             src={src}
-            alt={name}
+            alt={`Portrait of ${name}`}
             fill
             className="object-cover object-top"
             sizes={`${width}px`}

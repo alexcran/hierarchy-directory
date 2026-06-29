@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Analytics } from '@vercel/analytics/next'
 import localFont from 'next/font/local'
 import { SelectionProvider } from '@/contexts/SelectionContext'
@@ -8,6 +8,8 @@ import { Breadcrumbs } from '@/components/layout/Breadcrumbs'
 import { SelectionBar } from '@/components/layout/SelectionBar'
 import { Footer } from '@/components/layout/Footer'
 import { NavigationProgress } from '@/components/layout/NavigationProgress'
+import { NoticeBar } from '@/components/NoticeBar'
+import { headers } from 'next/headers'
 import './globals.css'
 
 const cormorantGaramond = localFont({
@@ -33,7 +35,12 @@ const publicSans = localFont({
   display: 'swap',
 })
 
+export const viewport: Viewport = {
+  themeColor: '#7A1B2E',
+}
+
 export const metadata: Metadata = {
+  metadataBase: new URL('https://hierarchy.directory'),
   title: {
     default: 'Hierarchy.Directory — A Visual Directory of the Hierarchy of the Catholic Church',
     template: '%s | Hierarchy.Directory',
@@ -50,11 +57,20 @@ export const metadata: Metadata = {
     description: 'A visual directory of the hierarchy of the Catholic Church. Currently featuring the bishops and dioceses of the United States.',
     images: [{ url: '/hierarchy-directory-created-with-logo.png', alt: 'Hierarchy.Directory' }],
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Hierarchy.Directory — A Visual Directory of the Hierarchy of the Catholic Church',
+    description: 'A visual directory of the hierarchy of the Catholic Church. Currently featuring the bishops and dioceses of the United States.',
+    images: ['/hierarchy-directory-created-with-logo.png'],
+  },
 }
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const pathname = headers().get('x-pathname') ?? ''
+  const isAdminRoute = pathname === '/admin' || pathname.startsWith('/admin/')
+
   return (
     <html lang="en">
       <body
@@ -63,6 +79,7 @@ export default function RootLayout({
         <BreadcrumbProvider>
           <SelectionProvider>
             <TopBar />
+            {!isAdminRoute && <NoticeBar />}
             <NavigationProgress />
             <div className="flex flex-col min-h-screen">
               <Breadcrumbs />

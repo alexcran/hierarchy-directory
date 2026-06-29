@@ -1,6 +1,22 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Search, FileSpreadsheet } from 'lucide-react'
 import { HeroSearch } from '@/components/search/HeroSearch'
+
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+  openGraph: {
+    url: 'https://hierarchy.directory',
+  },
+}
+
+const websiteSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'Hierarchy.Directory',
+  url: 'https://hierarchy.directory',
+  description: 'A visual directory of the hierarchy of the Catholic Church. Currently featuring the bishops and dioceses of the United States.',
+}
 
 function OrgChartIcon() {
   return (
@@ -43,6 +59,11 @@ const ENTRY_CARDS = [
 
 export default function HomePage() {
   return (
+    <>
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+    />
     <div
       className="min-h-[calc(100vh-64px)] w-full flex items-center justify-center px-6 py-16"
       style={{
@@ -56,11 +77,8 @@ export default function HomePage() {
           <h1 className="font-display text-4xl md:text-5xl font-semibold text-text-primary leading-tight text-balance">
             A Visual Directory of the Hierarchy of the Catholic Church
           </h1>
-          <p className="font-body text-base italic text-text-tertiary">
-            Currently featuring the bishops and dioceses of the United States.
-          </p>
           <p className="font-body text-lg text-text-secondary max-w-xl mx-auto pt-1">
-            Current and historical information about the bishops and dioceses connected to the United States.
+            Current and historical information about the bishops and dioceses of the Catholic Church, currently featuring bishops and dioceses connected to the United States.
           </p>
         </div>
 
@@ -83,5 +101,6 @@ export default function HomePage() {
         </div>
       </div>
     </div>
+    </>
   )
 }

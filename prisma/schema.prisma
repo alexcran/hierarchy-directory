@@ -314,6 +314,18 @@ model SourceCitation {
 }
 
 // ---------------------------------------------------------------------------
+// Site settings (generic key/value toggles and configuration)
+// ---------------------------------------------------------------------------
+
+model SiteSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("site_setting")
+}
+
+// ---------------------------------------------------------------------------
 // NOTE: Two indexes require raw SQL and must be applied in a migration:
 //
 // ---------------------------------------------------------------------------

@@ -35,7 +35,7 @@ const NAV_ITEMS: NavItem[] = [
       { label: 'Archbishops', href: '/bishops?rank=archbishop' },
       { label: 'By Religious Order', href: '/bishops' },
       { label: 'Resignation Pending', href: '/bishops?status=resignation_pending' },
-      { label: 'Recently Appointed', href: '/bishops?sort=recently_appointed' },
+      { label: 'Recently Appointed', href: '/bishops' },
     ],
   },
   {

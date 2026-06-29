@@ -19,7 +19,59 @@ export const dynamic = 'force-dynamic'
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const bishop = await getBishopBySlug(params.slug)
   if (!bishop) return {}
-  return { title: formatName(bishop, { honorific: false, isCardinal: !!bishop.cardinalate }) }
+
+  const isCardinal = !!bishop.cardinalate
+  const currentAsgn = bishop.assignments.find(a => a.isCurrent && a.role !== 'apostolic_administrator') ?? null
+  const currentSeeName = currentAsgn
+    ? formatSeeName(currentAsgn.see.name, currentAsgn.see.seeType, currentAsgn.see.namePrefixOverride)
+    : null
+  const currentRoleTitle = currentAsgn && currentSeeName
+    ? formatRoleTitle(currentAsgn.role, currentSeeName)
+    : null
+  const soa = computeStyleOfAddress({
+    styleOfAddress: bishop.styleOfAddress,
+    isCardinal,
+    currentRole: currentAsgn?.role ?? null,
+    riteType: bishop.rite.type,
+    hasEpiscopalConsecration: bishop.consecrations.length > 0,
+  })
+
+  const nameParts = [bishop.displayName]
+  if (currentSeeName) nameParts.push(currentSeeName)
+  const title = { absolute: `${nameParts.join(' | ')} | Hierarchy.Directory` }
+
+  const descParts: string[] = []
+  if (currentRoleTitle && currentSeeName) {
+    descParts.push(`${soa} ${bishop.displayName} serves as ${currentRoleTitle} of ${currentAsgn!.see.name}`)
+  } else {
+    descParts.push(`${soa} ${bishop.displayName} is a bishop of the Catholic Church`)
+  }
+  if (bishop.consecrations[0]) {
+    descParts.push(`ordained bishop in ${bishop.consecrations[0].date.getFullYear()}`)
+  }
+  if (isCardinal && bishop.cardinalate) {
+    descParts.push(`Cardinal since ${bishop.cardinalate.dateCreated.getFullYear()}`)
+  }
+  const description = descParts.join(', ') + '. View biography and apostolic lineage on Hierarchy.Directory.'
+
+  const canonical = `https://hierarchy.directory/bishops/${params.slug}`
+  return {
+    title,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      title: title.absolute,
+      description,
+      url: canonical,
+      ...(bishop.portraitUrl ? { images: [{ url: bishop.portraitUrl, alt: `Portrait of ${bishop.displayName}` }] } : {}),
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: title.absolute,
+      description,
+      ...(bishop.portraitUrl ? { images: [bishop.portraitUrl] } : {}),
+    },
+  }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -517,7 +569,32 @@ export default async function BishopDetailPage({ params }: { params: { slug: str
 
   const breadcrumbName = formatName(bishop, { honorific: false, isCardinal })
 
+  const personSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: bishop.displayName,
+    url: `https://hierarchy.directory/bishops/${params.slug}`,
+    ...(bishop.portraitUrl ? { image: bishop.portraitUrl } : {}),
+    ...(bishop.dateOfBirth ? { birthDate: bishop.dateOfBirth.toISOString().split('T')[0] } : {}),
+    ...(bishop.dateOfDeath ? { deathDate: bishop.dateOfDeath.toISOString().split('T')[0] } : {}),
+    ...(currentRoleTitle && currentSeeName ? {
+      jobTitle: currentRoleTitle,
+      affiliation: { '@type': 'ReligiousOrganization', name: currentSeeName },
+    } : {}),
+  }
+
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Bishops', item: 'https://hierarchy.directory/bishops' },
+      { '@type': 'ListItem', position: 2, name: bishop.displayName, item: `https://hierarchy.directory/bishops/${params.slug}` },
+    ],
+  }
+
   return (
+    <>
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([personSchema, breadcrumbSchema]) }} />
     <div className="max-w-[920px] mx-auto px-6 py-6 pb-24">
       <SetBreadcrumbTitle title={breadcrumbName} />
       {/* Back link */}
@@ -691,5 +768,6 @@ export default async function BishopDetailPage({ params }: { params: { slug: str
       {/* Tabs */}
       <DetailTabs tabs={tabs} panels={panels} />
     </div>
+    </>
   )
 }

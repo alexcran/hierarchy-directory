@@ -8,7 +8,7 @@ import { buildPersonNameSearchWhere } from '@/lib/utils/personSearch'
 
 // ─── Filter types ─────────────────────────────────────────────────────────────
 
-export type BishopSort = 'recently_appointed' | 'last_name' | 'see' | 'consecration_date' | 'age'
+export type BishopSort = 'appointment_date' | 'recently_appointed' | 'last_name' | 'see' | 'consecration_date' | 'age'
 
 export interface BishopsFilters {
   search?: string
@@ -234,7 +234,7 @@ const listInclude = {
       },
     },
     orderBy: [{ startDate: 'desc' }, { installedDate: 'desc' }] as Prisma.AssignmentOrderByWithRelationInput[],
-    take: 1,
+    take: 5,
   },
   cardinalate: { select: { id: true } },
   consecrations: {
@@ -356,16 +356,21 @@ function toListItem(p: ListRaw): BishopListItem {
   }
 }
 
-function mostRecentAssignmentTime(p: ListRaw): number {
-  const asgn = p.assignments[0]
-  return asgn?.startDate?.getTime() ?? asgn?.installedDate?.getTime() ?? 0
+// Returns the startDate of the primary ordinary assignment (non-auxiliary, non-emeritus,
+// non-apostolic-administrator). Falls back to the most recent current assignment if none found.
+function primaryAssignmentStartTime(p: ListRaw): number {
+  const primary = p.assignments.find(
+    a => ORDINARY_ROLES.includes(a.role) || a.role === 'coadjutor',
+  ) ?? p.assignments[0]
+  return primary?.startDate?.getTime() ?? 0
 }
 
 export async function getBishops(
   filters: BishopsFilters = {},
-  sort: BishopSort = 'last_name',
+  sort: BishopSort = 'appointment_date',
   page = 1,
   perPage = 48,
+  dir: 'asc' | 'desc' = 'desc',
 ): Promise<BishopsResult> {
   const { status = [], rank = [], ...rest } = filters
   const search = rest.search?.trim()
@@ -381,18 +386,27 @@ export async function getBishops(
 
   let orderBy: Prisma.PersonOrderByWithRelationInput | Prisma.PersonOrderByWithRelationInput[]
 
+  const isInMemorySort = sort === 'appointment_date' || sort === 'recently_appointed'
+
   switch (sort) {
     case 'age':
-      orderBy = { dateOfBirth: 'asc' }   // oldest first
+      orderBy = { dateOfBirth: dir === 'asc' ? 'asc' : 'desc' }
       break
+    case 'appointment_date':
     case 'recently_appointed':
+      // Sorted in-memory after fetch to support primary-assignment logic
       orderBy = [{ lastName: 'asc' }, { firstName: 'asc' }]
+      break
+    case 'last_name':
+      orderBy = [
+        { lastName: dir === 'asc' ? 'asc' : 'desc' },
+        { firstName: dir === 'asc' ? 'asc' : 'desc' },
+      ]
       break
     case 'consecration_date':
     // Ordering by consecration date or see name requires raw SQL for a to-many relation;
     // fall through to last_name until that is implemented.
     case 'see':
-    case 'last_name':
     default:
       orderBy = [{ lastName: 'asc' }, { firstName: 'asc' }]
   }
@@ -402,24 +416,22 @@ export async function getBishops(
       where: fullWhere,
       include: listInclude,
       orderBy,
-      ...(sort === 'recently_appointed'
+      ...(isInMemorySort
         ? {}
-        : {
-            skip: (page - 1) * perPage,
-            take: perPage,
-          }),
+        : { skip: (page - 1) * perPage, take: perPage }),
     }),
     prisma.person.count({ where: fullWhere }),
     getFilterCounts(forStatusCounts, forRankCounts),
   ])
 
-  const pageBishops = sort === 'recently_appointed'
+  const pageBishops = isInMemorySort
     ? bishops
         .sort((a, b) => {
-          const dateDiff = mostRecentAssignmentTime(b) - mostRecentAssignmentTime(a)
-          if (dateDiff !== 0) return dateDiff
-          const lastDiff = a.lastName.localeCompare(b.lastName)
-          return lastDiff || a.firstName.localeCompare(b.firstName)
+          const ta = primaryAssignmentStartTime(a)
+          const tb = primaryAssignmentStartTime(b)
+          const timeDiff = dir === 'desc' ? tb - ta : ta - tb
+          if (timeDiff !== 0) return timeDiff
+          return a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName)
         })
         .slice((page - 1) * perPage, page * perPage)
     : bishops

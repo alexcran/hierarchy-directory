@@ -8,6 +8,7 @@ const TABS = [
   { href: '/admin/bishops',  label: 'Bishops' },
   { href: '/admin/dioceses', label: 'Dioceses' },
   { href: '/admin/quality',  label: 'Quality' },
+  { href: '/admin/settings', label: 'Settings' },
 ]
 
 export function AdminNav() {

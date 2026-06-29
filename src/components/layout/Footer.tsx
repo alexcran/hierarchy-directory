@@ -18,13 +18,6 @@ const NAV_COLUMNS = [
       { href: '/contact', label: 'Contact' },
     ],
   },
-  {
-    heading: 'Resources',
-    links: [
-      { href: 'https://www.catholic-hierarchy.org', label: 'Catholic-hierarchy.org', external: true },
-      { href: 'https://www.usccb.org/offices/directory-bishops', label: 'USCCB Directory', external: true },
-    ],
-  },
 ]
 
 export function Footer() {
@@ -33,7 +26,7 @@ export function Footer() {
       <div className="max-w-content mx-auto px-6">
 
         {/* ── Logo row ────────────────────────────────────── */}
-        <div className="pt-14 pb-8">
+        <div className="pt-10 pb-6">
           <Image
             src="/hierarchy-directory-logo-white.svg"
             alt="Hierarchy.Directory"
@@ -46,48 +39,40 @@ export function Footer() {
         <div style={{ borderTopColor: '#2A2520' }} className="border-t" />
 
         {/* ── Content row ─────────────────────────────────── */}
-        <div className="flex flex-col md:flex-row gap-10 md:gap-16 py-12">
+        <div className="flex flex-col md:flex-row gap-8 md:gap-14 py-8">
 
           {/* Left ~35% — tagline block */}
-          <div className="md:w-[35%] flex-shrink-0">
+          <div className="md:flex-1 md:max-w-[58%]">
             <div className="space-y-1.5 text-[14px] font-body text-[#9C958D] leading-relaxed">
               <p>A Visual Directory of the Hierarchy of the Catholic Church.</p>
               <p className="italic text-[#6B6560]">Currently featuring the bishops and dioceses of the United States.</p>
               <p>Dedicated to Mary, Queen of Apostles and the Immaculate Conception.</p>
               <p className="italic">Ora pro nobis!</p>
             </div>
-            <p className="mt-5 text-[12px] font-body text-[#5A5550] leading-relaxed">
+            <p className="mt-4 text-[12px] font-body text-[#5A5550] leading-relaxed">
               Not affiliated with the USCCB, any (arch)diocese, or the Holy See.
             </p>
           </div>
 
           {/* Right ~65% — three nav columns */}
-          <div className="md:flex-1 grid grid-cols-3 gap-8 md:gap-12">
+          <div className="md:w-[34%] grid grid-cols-2 gap-8 md:gap-12">
             {NAV_COLUMNS.map(({ heading, links }) => (
-              <div key={heading}>
+              <div
+                key={heading}
+                className={heading === 'About' ? 'md:justify-self-end' : undefined}
+              >
                 <h3 className="font-body font-semibold text-[#9C958D] text-[11px] uppercase tracking-widest mb-5">
                   {heading}
                 </h3>
                 <ul className="space-y-3">
                   {links.map(link => (
                     <li key={link.href}>
-                      {'external' in link && link.external ? (
-                        <a
-                          href={link.href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-[14px] font-body text-[#DDD8D0] no-underline hover:text-white hover:underline underline-offset-2 transition-colors"
-                        >
-                          {link.label}
-                        </a>
-                      ) : (
-                        <Link
-                          href={link.href}
-                          className="text-[14px] font-body text-[#DDD8D0] no-underline hover:text-white hover:underline underline-offset-2 transition-colors"
-                        >
-                          {link.label}
-                        </Link>
-                      )}
+                      <Link
+                        href={link.href}
+                        className="text-[14px] font-body text-[#DDD8D0] no-underline hover:text-white hover:underline underline-offset-2 transition-colors"
+                      >
+                        {link.label}
+                      </Link>
                     </li>
                   ))}
                 </ul>
@@ -100,7 +85,7 @@ export function Footer() {
         <div style={{ borderTopColor: '#2A2520' }} className="border-t" />
 
         {/* ── Bottom bar ──────────────────────────────────── */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 py-5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 py-4">
           <p className="text-[12px] font-body text-[#5A5550] leading-relaxed">
             Website, code, and design are copyright &copy; 2026 Hierarchy.Directory. All rights reserved.
             {' '}No ownership or copyright is claimed over images, portraits, or data.{' '}

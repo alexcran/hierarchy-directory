@@ -7,6 +7,7 @@ export interface Filters {
   status: string[]
   rank: string[]
   sort: string
+  dir: string
   page: number
   // Location
   state: string
@@ -51,7 +52,8 @@ export function useFilters() {
                          ? []
                          : statusParam?.split(',').filter(Boolean) ?? ['living'],
     rank:              searchParams.get('rank')?.split(',').filter(Boolean)    ?? [],
-    sort:              searchParams.get('sort')                ?? 'recently_appointed',
+    sort:              searchParams.get('sort')                ?? 'appointment_date',
+    dir:               searchParams.get('dir')                ?? 'desc',
     page:              Math.max(1, Number(searchParams.get('page') ?? '1')),
     state:             searchParams.get('state')               ?? '',
     dioceseId:         searchParams.get('diocese')             ?? '',
@@ -109,8 +111,13 @@ export function useFilters() {
     if ('ordinationAfter'   in updates) set('ordination_after',     updates.ordinationAfter)
     if ('ordinationBefore'  in updates) set('ordination_before',    updates.ordinationBefore)
     if ('sort' in updates) {
-      if (updates.sort && updates.sort !== 'recently_appointed') params.set('sort', updates.sort)
+      if (updates.sort && updates.sort !== 'appointment_date') params.set('sort', updates.sort)
       else params.delete('sort')
+    }
+    if ('dir' in updates) {
+      // 'desc' is the default; omit from URL when default
+      if (updates.dir && updates.dir !== 'desc') params.set('dir', updates.dir)
+      else params.delete('dir')
     }
     if ('page' in updates) {
       if ((updates.page ?? 1) > 1) params.set('page', String(updates.page))

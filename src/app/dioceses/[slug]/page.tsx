@@ -14,7 +14,32 @@ export const dynamic = 'force-dynamic'
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
   const diocese = await getDioceseBySlug(params.slug)
   if (!diocese) return {}
-  return { title: diocese.seeName }
+
+  const descParts: string[] = [diocese.seeName]
+  if (diocese.stateRegion) descParts.push(diocese.stateRegion)
+  if (diocese.dateErected) descParts.push(`erected ${diocese.dateErected.getFullYear()}`)
+  const currentLeader = diocese.currentLeadership[0] ?? null
+  if (currentLeader) descParts.push(`led by ${currentLeader.displayName}`)
+  const description = descParts.join(' · ') + '. Diocese information on Hierarchy.Directory.'
+
+  const canonical = `https://hierarchy.directory/dioceses/${params.slug}`
+  return {
+    title: diocese.seeName,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      title: `${diocese.seeName} | Hierarchy.Directory`,
+      description,
+      url: canonical,
+      ...(diocese.coatOfArmsUrl ? { images: [{ url: diocese.coatOfArmsUrl, alt: `Coat of arms of ${diocese.seeName}` }] } : {}),
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${diocese.seeName} | Hierarchy.Directory`,
+      description,
+      ...(diocese.coatOfArmsUrl ? { images: [diocese.coatOfArmsUrl] } : {}),
+    },
+  }
 }
 
 const ORDINARY_ROLES = new Set(['ordinary', 'diocesan_bishop', 'archbishop', 'bishop_elect', 'archbishop_elect', 'coadjutor', 'apostolic_administrator', 'archbishop_emeritus', 'bishop_emeritus', 'coadjutor_emeritus'])
@@ -114,7 +139,34 @@ export default async function DioceseDetailPage({ params }: { params: { slug: st
   const diocese = await getDioceseBySlug(params.slug)
   if (!diocese) notFound()
 
+  const organizationSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'ReligiousOrganization',
+    name: diocese.seeName,
+    url: `https://hierarchy.directory/dioceses/${params.slug}`,
+    ...(diocese.coatOfArmsUrl ? { logo: diocese.coatOfArmsUrl } : {}),
+    ...(diocese.dateErected ? { foundingDate: String(diocese.dateErected.getFullYear()) } : {}),
+    ...(diocese.country?.name ? {
+      address: {
+        '@type': 'PostalAddress',
+        addressCountry: diocese.country.name,
+        ...(diocese.stateRegion ? { addressRegion: diocese.stateRegion } : {}),
+      },
+    } : {}),
+  }
+
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Dioceses', item: 'https://hierarchy.directory/dioceses' },
+      { '@type': 'ListItem', position: 2, name: diocese.seeName, item: `https://hierarchy.directory/dioceses/${params.slug}` },
+    ],
+  }
+
   return (
+    <>
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify([organizationSchema, breadcrumbSchema]) }} />
     <div className="max-w-content mx-auto px-6 py-6 pb-24">
       <SetBreadcrumbTitle title={diocese.seeName} />
 
@@ -301,5 +353,6 @@ export default async function DioceseDetailPage({ params }: { params: { slug: st
         </aside>
       </div>
     </div>
+    </>
   )
 }

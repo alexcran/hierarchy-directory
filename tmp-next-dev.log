@@ -1,0 +1,19 @@
+
+> hierarchy-directory@0.1.0 dev
+> next dev --hostname 127.0.0.1 --port 5173
+
+  ▲ Next.js 14.2.35
+  - Local:        http://127.0.0.1:5173
+  - Network:      http://127.0.0.1:5173
+  - Environments: .env.local, .env
+
+ ✓ Starting...
+ ✓ Ready in 14.3s
+ ✓ Compiled /src/middleware in 324ms (72 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 5.3s (676 modules)
+ GET / 200 in 5906ms
+ GET / 200 in 60ms
+ GET / 200 in 43ms
+ GET / 200 in 53ms
+[?25h
