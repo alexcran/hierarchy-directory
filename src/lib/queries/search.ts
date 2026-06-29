@@ -2,6 +2,7 @@ import prisma from '@/lib/prisma'
 import { formatSeeName } from '@/lib/utils/formatSeeName'
 import { formatName } from '@/lib/utils/formatName'
 import { buildPersonNameSearchWhere } from '@/lib/utils/personSearch'
+import { isCurrentCardinal, isLaicized } from '@/lib/utils/personStatus'
 
 export interface SearchBishopResult {
   id: string
@@ -10,6 +11,7 @@ export interface SearchBishopResult {
   title: string | null
   portraitUrl: string | null
   isCardinal: boolean
+  isLaicized: boolean
 }
 
 export interface SearchDioceseResult {
@@ -40,7 +42,9 @@ export async function typeaheadSearch(query: string): Promise<TypeaheadResult> {
         suffix: true,
         religiousOrder: { select: { abbreviation: true } },
         portraitUrl: true,
-        cardinalate: { select: { id: true } },
+        laicizedDate: true,
+        laicizationReason: true,
+        cardinalate: { select: { id: true, dateEnded: true } },
         assignments: {
           where: { isCurrent: true },
           include: { see: { select: { name: true, seeType: true, namePrefixOverride: true } } },
@@ -67,16 +71,19 @@ export async function typeaheadSearch(query: string): Promise<TypeaheadResult> {
 
   const bishops: SearchBishopResult[] = persons.map((p) => {
     const asgn = p.assignments[0] ?? null
+    const laicized = isLaicized(p)
+    const currentCardinal = isCurrentCardinal(p)
     const title = asgn
       ? formatSeeName(asgn.see.name, asgn.see.seeType, asgn.see.namePrefixOverride)
       : null
     return {
       id:          p.id,
       slug:        p.slug,
-      name:        formatName(p, { isCardinal: !!p.cardinalate }),
+      name:        formatName(p, { isCardinal: currentCardinal && !laicized, honorificLabel: laicized ? null : 'Most Rev.' }),
       title,
       portraitUrl: p.portraitUrl,
-      isCardinal:  !!p.cardinalate,
+      isCardinal:  currentCardinal && !laicized,
+      isLaicized:  laicized,
     }
   })
 

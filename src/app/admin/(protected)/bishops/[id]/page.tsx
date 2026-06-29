@@ -11,6 +11,7 @@ import { ConsecrationEditor, type ConsecrationData } from './ConsecrationEditor'
 import { EducationEditor, type EducationRecord } from './EducationEditor'
 import { VaticanEventsEditor, type VaticanEventRecord } from './VaticanEventsEditor'
 import { BreadcrumbSetter } from '@/components/admin/BreadcrumbSetter'
+import { isCurrentCardinal } from '@/lib/utils/personStatus'
 import { type Prisma } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
@@ -59,10 +60,10 @@ function fmtDate(d: Date | null): string {
 export async function generateMetadata({ params }: { params: { id: string } }) {
   const person = await prisma.person.findUnique({
     where: { id: params.id },
-    select: { firstName: true, middleName: true, lastName: true, suffix: true, cardinalate: { select: { id: true } } },
+    select: { firstName: true, middleName: true, lastName: true, suffix: true, cardinalate: { select: { id: true, dateEnded: true } } },
   })
   if (!person) return { title: 'Bishop' }
-  return { title: `${formatName(person, { isCardinal: !!person.cardinalate })} — Admin` }
+  return { title: `${formatName(person, { isCardinal: isCurrentCardinal(person) })} — Admin` }
 }
 
 export default async function BishopEditPage({ params }: { params: { id: string } }) {
@@ -103,6 +104,8 @@ export default async function BishopEditPage({ params }: { params: { id: string 
     styleOfAddress:      typedPerson.styleOfAddress,
     dateOfBirth:         fmtDate(typedPerson.dateOfBirth),
     dateOfDeath:         fmtDate(typedPerson.dateOfDeath),
+    laicizedDate:        fmtDate(typedPerson.laicizedDate),
+    laicizationReason:   typedPerson.laicizationReason,
     placeOfBirth:        typedPerson.placeOfBirth,
     motto:               typedPerson.motto,
     catholicHierarchyId: typedPerson.catholicHierarchyId,
@@ -161,6 +164,8 @@ export default async function BishopEditPage({ params }: { params: { id: string 
     cardinalOrder: card.cardinalOrder,
     titularChurch: card.titularChurch ?? '',
     isElector:     card.isElector,
+    dateEnded:     fmtDate(card.dateEnded),
+    endReason:     card.endReason ?? '',
   } : null
 
   const vaticanEventRecords: VaticanEventRecord[] = typedPerson.vaticanEvents.map((e: BishopEditPerson['vaticanEvents'][number]) => ({
@@ -173,7 +178,7 @@ export default async function BishopEditPage({ params }: { params: { id: string 
 
   return (
     <>
-      <BreadcrumbSetter label={formatName(typedPerson, { isCardinal: !!typedPerson.cardinalate })} />
+      <BreadcrumbSetter label={formatName(typedPerson, { isCardinal: isCurrentCardinal(typedPerson) })} />
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3 min-w-0">
           <Link href="/admin/bishops" className="text-sm font-body text-text-tertiary hover:text-text-primary transition-colors">
@@ -181,7 +186,7 @@ export default async function BishopEditPage({ params }: { params: { id: string 
           </Link>
           <span className="text-text-tertiary">/</span>
           <h1 className="font-display text-2xl font-semibold text-text-primary truncate">
-            {formatName(typedPerson, { isCardinal: !!typedPerson.cardinalate })}
+            {formatName(typedPerson, { isCardinal: isCurrentCardinal(typedPerson) })}
           </h1>
         </div>
         <Link

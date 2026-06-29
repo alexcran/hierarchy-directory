@@ -100,7 +100,7 @@ export function HeroSearch() {
                     name={b.name}
                     width={32}
                     height={32}
-                    rankColor={b.isCardinal ? '#C41E3A' : '#007A00'}
+                    rankColor={b.isLaicized ? '#1A1714' : b.isCardinal ? '#C41E3A' : '#007A00'}
                     barHeight={4}
                   />
                   <div className="min-w-0">

@@ -12,6 +12,7 @@ import { formatName } from '@/lib/utils/formatName'
 import { formatSeeName } from '@/lib/utils/formatSeeName'
 import { formatRoleTitle } from '@/lib/utils/formatTitle'
 import { computeStyleOfAddress, getStyleOfAddressColor } from '@/lib/utils/styleOfAddress'
+import { formatCardinalateEndReason, formatLaicizationReason, isCurrentCardinal, isLaicized } from '@/lib/utils/personStatus'
 import { isElectRole } from '@/lib/utils/roles'
 
 export const dynamic = 'force-dynamic'
@@ -20,7 +21,8 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const bishop = await getBishopBySlug(params.slug)
   if (!bishop) return {}
 
-  const isCardinal = !!bishop.cardinalate
+  const laicized = isLaicized(bishop)
+  const isCardinal = isCurrentCardinal(bishop) && !laicized
   const currentAsgn = bishop.assignments.find(a => a.isCurrent && a.role !== 'apostolic_administrator') ?? null
   const currentSeeName = currentAsgn
     ? formatSeeName(currentAsgn.see.name, currentAsgn.see.seeType, currentAsgn.see.namePrefixOverride)
@@ -34,6 +36,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     currentRole: currentAsgn?.role ?? null,
     riteType: bishop.rite.type,
     hasEpiscopalConsecration: bishop.consecrations.length > 0,
+    isLaicized: laicized,
   })
 
   const nameParts = [bishop.displayName]
@@ -263,7 +266,7 @@ function buildTimeline(bishop: NonNullable<Awaited<ReturnType<typeof getBishopBy
       label: 'Ordained to the Priesthood',
       detail: detailWithDate(ord.date, formatPersonalLocation(ord.location, null, bishop)),
       persons: ord.ordainingBishop
-        ? [{ id: ord.ordainingBishop.id, slug: ord.ordainingBishop.slug, name: formatName(ord.ordainingBishop, { isCardinal: !!ord.ordainingBishop.cardinalate }), portraitUrl: ord.ordainingBishop.portraitUrl, isCardinal: !!ord.ordainingBishop.cardinalate }]
+        ? [{ id: ord.ordainingBishop.id, slug: ord.ordainingBishop.slug, name: formatName(ord.ordainingBishop, { isCardinal: isCurrentCardinal(ord.ordainingBishop) }), portraitUrl: ord.ordainingBishop.portraitUrl, isCardinal: isCurrentCardinal(ord.ordainingBishop) }]
         : undefined,
     })
   }
@@ -271,14 +274,14 @@ function buildTimeline(bishop: NonNullable<Awaited<ReturnType<typeof getBishopBy
   for (const consecration of bishop.consecrations) {
     const persons = [
       consecration.principalConsecrator
-        ? { id: consecration.principalConsecrator.id, slug: consecration.principalConsecrator.slug, name: formatName(consecration.principalConsecrator, { isCardinal: !!consecration.principalConsecrator.cardinalate }), portraitUrl: consecration.principalConsecrator.portraitUrl, isCardinal: !!consecration.principalConsecrator.cardinalate }
+        ? { id: consecration.principalConsecrator.id, slug: consecration.principalConsecrator.slug, name: formatName(consecration.principalConsecrator, { isCardinal: isCurrentCardinal(consecration.principalConsecrator) }), portraitUrl: consecration.principalConsecrator.portraitUrl, isCardinal: isCurrentCardinal(consecration.principalConsecrator) }
         : null,
       ...consecration.coConsecrators.map((cc) => ({
         id: cc.coConsecrator.id as string,
         slug: cc.coConsecrator.slug as string,
-        name: formatName(cc.coConsecrator as Parameters<typeof formatName>[0], { isCardinal: !!(cc.coConsecrator as { cardinalate?: { id: string } | null }).cardinalate }),
+        name: formatName(cc.coConsecrator as Parameters<typeof formatName>[0], { isCardinal: isCurrentCardinal(cc.coConsecrator) }),
         portraitUrl: cc.coConsecrator.portraitUrl as string | null,
-        isCardinal: !!(cc.coConsecrator as { cardinalate?: { id: string } | null }).cardinalate,
+        isCardinal: isCurrentCardinal(cc.coConsecrator),
       })),
     ].filter((p): p is NonNullable<typeof p> => p !== null)
 
@@ -303,6 +306,23 @@ function buildTimeline(bishop: NonNullable<Awaited<ReturnType<typeof getBishopBy
           : null,
         bishop.cardinalate.titularChurch,
       ].filter(Boolean).join(' · '),
+    })
+    if (bishop.cardinalate.dateEnded) {
+      events.push({
+        date: bishop.cardinalate.dateEnded,
+        nodeColor: CARDINAL_EVENT_COLOR,
+        label: formatCardinalateEndReason(bishop.cardinalate.endReason),
+        detail: fmtDate(bishop.cardinalate.dateEnded),
+      })
+    }
+  }
+
+  if (bishop.laicizedDate) {
+    events.push({
+      date: bishop.laicizedDate,
+      nodeColor: LIFE_EVENT_COLOR,
+      label: formatLaicizationReason(bishop.laicizationReason),
+      detail: fmtDate(bishop.laicizedDate),
     })
   }
 
@@ -366,7 +386,8 @@ export default async function BishopDetailPage({ params }: { params: { slug: str
   if (!bishop) notFound()
   const lineage = await getBishopLineage(bishop.id)
   const currentAsgn = bishop.assignments.find(a => a.isCurrent && a.role !== 'apostolic_administrator') ?? null
-  const isCardinal = !!bishop.cardinalate
+  const laicized = isLaicized(bishop)
+  const isCardinal = isCurrentCardinal(bishop) && !laicized
 
   const soa = computeStyleOfAddress({
     styleOfAddress: bishop.styleOfAddress,
@@ -374,9 +395,10 @@ export default async function BishopDetailPage({ params }: { params: { slug: str
     currentRole: currentAsgn?.role ?? null,
     riteType: bishop.rite.type,
     hasEpiscopalConsecration: bishop.consecrations.length > 0,
+    isLaicized: laicized,
   })
   const soaColor = getStyleOfAddressColor(soa)
-  const stripeColor = isCardinal ? '#C41E3A' : '#007A00'
+  const stripeColor = laicized ? '#1A1714' : isCardinal ? '#C41E3A' : '#007A00'
 
   const currentSeeName = currentAsgn
     ? formatSeeName(currentAsgn.see.name, currentAsgn.see.seeType, currentAsgn.see.namePrefixOverride)
@@ -386,11 +408,12 @@ export default async function BishopDetailPage({ params }: { params: { slug: str
     : null
 
   const today   = new Date()
-  const refDate = bishop.dateOfDeath ?? today
-  const priestDuration   = yearsMonthsDuration(bishop.priesthoodOrdination?.date, refDate)
-  const bishopDuration   = yearsMonthsDuration(bishop.consecrations[0]?.date, refDate)
-  const cardinalDuration = isCardinal ? yearsMonthsDuration(bishop.cardinalate!.dateCreated, refDate) : null
-  const age = yearsSpan(bishop.dateOfBirth, refDate)
+  const ageRefDate = bishop.dateOfDeath ?? today
+  const clericalRefDate = bishop.laicizedDate ?? ageRefDate
+  const priestDuration   = yearsMonthsDuration(bishop.priesthoodOrdination?.date, clericalRefDate)
+  const bishopDuration   = yearsMonthsDuration(bishop.consecrations[0]?.date, clericalRefDate)
+  const cardinalDuration = isCardinal ? yearsMonthsDuration(bishop.cardinalate!.dateCreated, ageRefDate) : null
+  const age = yearsSpan(bishop.dateOfBirth, ageRefDate)
 
   // Retirement countdown — only for living bishops with a non-emeritus current assignment
   const isActiveNonEmeritus =
@@ -515,6 +538,8 @@ export default async function BishopDetailPage({ params }: { params: { slug: str
       {consecrationsGiven.map(c => {
         const p = c.person
         const asgn = p.assignments[0] ?? null
+        const pLaicized = isLaicized(p)
+        const pCurrentCardinal = isCurrentCardinal(p)
         const cardStatus = p.dateOfDeath
           ? 'deceased'
           : asgn
@@ -539,8 +564,8 @@ export default async function BishopDetailPage({ params }: { params: { slug: str
               religiousOrderId: null,
               religiousOrderFullName: null,
               portraitUrl: p.portraitUrl,
-              displayName: formatName(p, { isCardinal: !!p.cardinalate }),
-              styleOfAddress: computeStyleOfAddress({ styleOfAddress: p.styleOfAddress, isCardinal: !!p.cardinalate, currentRole: asgn?.role ?? null, riteType: p.rite.type }),
+              displayName: formatName(p, { isCardinal: pCurrentCardinal && !pLaicized, honorificLabel: pLaicized ? null : 'Most Rev.' }),
+              styleOfAddress: computeStyleOfAddress({ styleOfAddress: p.styleOfAddress, isCardinal: pCurrentCardinal && !pLaicized, currentRole: asgn?.role ?? null, riteType: p.rite.type, isLaicized: pLaicized }),
               currentAssignment: asgn
                 ? {
                     id: asgn.id,
@@ -550,7 +575,8 @@ export default async function BishopDetailPage({ params }: { params: { slug: str
                     seeName: formatSeeName(asgn.see.name, asgn.see.seeType, asgn.see.namePrefixOverride),
                   }
                 : null,
-              isCardinal: !!p.cardinalate,
+              isCardinal: pCurrentCardinal && !pLaicized,
+              isLaicized: pLaicized,
               status: cardStatus,
               statusLabel: cardStatusLabel,
               episcopalConsecrationDate: null,
@@ -625,9 +651,11 @@ export default async function BishopDetailPage({ params }: { params: { slug: str
         {/* Biographical info */}
         <div className="flex-1 min-w-0 pt-1">
           {/* Style of address — italic, rank color, above name */}
-          <p className="font-display italic text-[1.7rem] sm:text-[2.1rem] leading-snug mb-1" style={{ color: soaColor }}>
-            {soa}
-          </p>
+          {soa && (
+            <p className="font-display italic text-[1.7rem] sm:text-[2.1rem] leading-snug mb-1" style={{ color: soaColor }}>
+              {soa}
+            </p>
+          )}
 
           {/* Full name — Cormorant Garamond */}
           <h1 className="font-display text-3xl sm:text-4xl font-semibold text-text-primary leading-tight">

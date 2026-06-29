@@ -2,6 +2,7 @@ import { type Prisma } from '@prisma/client'
 import prisma from '@/lib/prisma'
 import { formatSeeName } from '@/lib/utils/formatSeeName'
 import { formatName } from '@/lib/utils/formatName'
+import { isCurrentCardinal, isLaicized } from '@/lib/utils/personStatus'
 import { ORDINARY_ROLES, isElectRole } from '@/lib/utils/roles'
 
 const detailInclude = {
@@ -24,7 +25,9 @@ const detailInclude = {
           religiousOrder: { select: { abbreviation: true } },
           portraitUrl: true,
           dateOfBirth: true,
-          cardinalate: { select: { id: true } },
+          laicizedDate: true,
+          laicizationReason: true,
+          cardinalate: { select: { id: true, dateEnded: true } },
         },
       },
     },
@@ -52,7 +55,9 @@ const detailInclude = {
               suffix: true,
               religiousOrder: { select: { abbreviation: true } },
               portraitUrl: true,
-              cardinalate: { select: { id: true } },
+              laicizedDate: true,
+              laicizationReason: true,
+              cardinalate: { select: { id: true, dateEnded: true } },
             },
           },
         },
@@ -70,6 +75,7 @@ export interface PersonStub {
   displayName: string
   portraitUrl: string | null
   isCardinal: boolean
+  isLaicized: boolean
 }
 
 export interface LeadershipEntry extends PersonStub {
@@ -136,14 +142,19 @@ function toPersonStub(p: {
   suffix: string | null
   religiousOrder: { abbreviation: string } | null
   portraitUrl: string | null
-  cardinalate: { id: string } | null
+  laicizedDate?: Date | null
+  laicizationReason?: string | null
+  cardinalate: { id: string; dateEnded?: Date | null } | null
 }, honorificLabel = 'Most Rev.'): PersonStub {
+  const laicized = isLaicized(p)
+  const currentCardinal = isCurrentCardinal(p)
   return {
     id:          p.id,
     slug:        p.slug,
-    displayName: formatName(p, { isCardinal: !!p.cardinalate, honorificLabel }),
+    displayName: formatName(p, { isCardinal: currentCardinal && !laicized, honorificLabel: laicized ? null : honorificLabel }),
     portraitUrl: p.portraitUrl,
-    isCardinal:  !!p.cardinalate,
+    isCardinal:  currentCardinal && !laicized,
+    isLaicized:  laicized,
   }
 }
 

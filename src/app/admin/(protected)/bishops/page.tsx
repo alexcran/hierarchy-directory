@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import prisma from '@/lib/prisma'
 import { formatName } from '@/lib/utils/formatName'
+import { isCurrentCardinal } from '@/lib/utils/personStatus'
 import { BishopListClient, type BishopRow } from './BishopListClient'
 import { type Prisma } from '@prisma/client'
 
@@ -16,7 +17,7 @@ const personSelect = {
   portraitUrl: true,
   slug: true,
   updatedAt: true,
-  cardinalate: { select: { id: true } },
+  cardinalate: { select: { id: true, dateEnded: true } },
   assignments: {
     where: { isCurrent: true },
     select: { role: true, see: { select: { name: true, seeType: true } } },
@@ -28,10 +29,10 @@ const personSelect = {
 type AdminBishop = Prisma.PersonGetPayload<{ select: typeof personSelect }>
 
 function getRank(
-  cardinalate: { id: string } | null,
+  cardinalate: { id: string; dateEnded: Date | null } | null,
   assignments: Array<{ role: string; see: { seeType: string } }>,
 ): 'Cardinal' | 'Archbishop' | 'Bishop' {
-  if (cardinalate) return 'Cardinal'
+  if (cardinalate && !cardinalate.dateEnded) return 'Cardinal'
   const a = assignments[0]
   if (a && a.see.seeType === 'archdiocese' && a.role !== 'auxiliary') return 'Archbishop'
   return 'Bishop'
@@ -47,7 +48,7 @@ export default async function AdminBishopsPage() {
   const rows: BishopRow[] = persons.map((p: AdminBishop) => ({
     id: p.id,
     slug: p.slug,
-    displayName: formatName(p, { honorific: false, isCardinal: !!p.cardinalate }),
+    displayName: formatName(p, { honorific: false, isCardinal: isCurrentCardinal(p) }),
     rank: getRank(p.cardinalate, p.assignments),
     portraitUrl: p.portraitUrl,
     currentSee: p.assignments[0]?.see.name ?? null,

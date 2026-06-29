@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Check } from 'lucide-react'
 import { useSelection } from '@/contexts/SelectionContext'
 import { formatName } from '@/lib/utils/formatName'
-import { formatRoleTitle, getRankColor } from '@/lib/utils/formatTitle'
+import { formatRoleTitle } from '@/lib/utils/formatTitle'
 import { getStyleOfAddressColor } from '@/lib/utils/styleOfAddress'
 import { getInitials } from '@/lib/utils/getInitials'
 import { isElectRole } from '@/lib/utils/roles'
@@ -22,7 +22,7 @@ export function BishopCard({ bishop, priority, showStatus = false }: BishopCardP
   const router = useRouter()
   const selected = isSelected(bishop.id)
 
-  const stripeColor = getRankColor(bishop.isCardinal)
+  const stripeColor = bishop.isLaicized ? '#1A1714' : bishop.isCardinal ? '#C41E3A' : '#007A00'
   const soaColor = getStyleOfAddressColor(bishop.styleOfAddress)
   const cardName = formatName(bishop, { honorific: false })
   const roleTitle = bishop.currentAssignment
@@ -65,7 +65,7 @@ export function BishopCard({ bishop, priority, showStatus = false }: BishopCardP
             <div className="absolute left-0 right-0 top-0 bottom-1.5 overflow-hidden">
               <Image
                 src={bishop.portraitUrl}
-                alt={`${cardName}, ${bishop.styleOfAddress}`}
+                alt={bishop.styleOfAddress ? `${cardName}, ${bishop.styleOfAddress}` : cardName}
                 fill
                 className="object-cover object-top"
                 sizes="(min-width: 1280px) 15vw, (min-width: 1024px) 20vw, (min-width: 640px) 28vw, 45vw"
@@ -93,11 +93,13 @@ export function BishopCard({ bishop, priority, showStatus = false }: BishopCardP
         {/* Info */}
         <div className="px-3 py-2.5">
           {/* Style of address — italic, rank color */}
-          <p className="font-display text-xs italic leading-snug" style={{ color: soaColor }}>
-            {bishop.styleOfAddress}
-          </p>
+          {bishop.styleOfAddress && (
+            <p className="font-display text-xs italic leading-snug" style={{ color: soaColor }}>
+              {bishop.styleOfAddress}
+            </p>
+          )}
           {/* Name — Cormorant Garamond Medium, no color change */}
-          <p className="font-display font-medium text-text-primary leading-snug text-sm mt-0.5">
+          <p className={`font-display font-medium text-text-primary leading-snug text-sm ${bishop.styleOfAddress ? 'mt-0.5' : ''}`}>
             {cardName}
             {showStatus && (
               <span className="ml-1.5 font-body text-[11px] text-text-tertiary">

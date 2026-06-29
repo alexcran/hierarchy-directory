@@ -4,6 +4,7 @@ import { formatName } from '@/lib/utils/formatName'
 import { formatSeeName } from '@/lib/utils/formatSeeName'
 import { formatRoleTitle } from '@/lib/utils/formatTitle'
 import { computeStyleOfAddress } from '@/lib/utils/styleOfAddress'
+import { isCurrentCardinal, isLaicized } from '@/lib/utils/personStatus'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,7 +30,9 @@ export async function GET(request: Request) {
       dateOfBirth: true,
       placeOfBirth: true,
       dateOfDeath: true,
-      cardinalate: { select: { id: true, dateCreated: true, cardinalOrder: true } },
+      laicizedDate: true,
+      laicizationReason: true,
+      cardinalate: { select: { id: true, dateCreated: true, cardinalOrder: true, dateEnded: true } },
       rite: { select: { name: true, type: true } },
       assignments: {
         where: { isCurrent: true },
@@ -51,7 +54,7 @@ export async function GET(request: Request) {
           date: true,
           location: true,
           principalConsecrator: {
-            select: { firstName: true, middleName: true, lastName: true, suffix: true, religiousOrder: { select: { abbreviation: true } }, cardinalate: { select: { id: true } } },
+            select: { firstName: true, middleName: true, lastName: true, suffix: true, religiousOrder: { select: { abbreviation: true } }, cardinalate: { select: { id: true, dateEnded: true } } },
           },
         },
       },
@@ -65,6 +68,8 @@ export async function GET(request: Request) {
 
   const results = persons.map((p) => {
     const asgn = p.assignments[0] ?? null
+    const laicized = isLaicized(p)
+    const currentCardinal = isCurrentCardinal(p)
     const seeName = asgn
       ? formatSeeName(asgn.see.name, asgn.see.seeType, asgn.see.namePrefixOverride)
       : null
@@ -74,11 +79,12 @@ export async function GET(request: Request) {
     return {
       id:                   p.id,
       slug:                 p.slug,
-      displayName:          formatName(p, { isCardinal: !!p.cardinalate }),
+      displayName:          formatName(p, { isCardinal: currentCardinal && !laicized, honorificLabel: laicized ? null : 'Most Rev.' }),
       firstName:            p.firstName,
       lastName:             p.lastName,
       portraitUrl:          p.portraitUrl,
-      isCardinal:           !!p.cardinalate,
+      isCardinal:           currentCardinal && !laicized,
+      isLaicized:           laicized,
       cardinalDateCreated:  p.cardinalate?.dateCreated?.toISOString() ?? null,
       cardinalRank:         p.cardinalate?.cardinalOrder ?? null,
       // Current Role
@@ -86,7 +92,7 @@ export async function GET(request: Request) {
       currentTitle:         asgn ? formatRoleTitle(asgn.role, asgn.role.endsWith('_emeritus') ? '' : seeName ?? '') : null,
       currentSee:           seeName,
       currentSeeSlug:       asgn?.see.slug ?? null,
-      styleOfAddress:       computeStyleOfAddress({ styleOfAddress: p.styleOfAddress, isCardinal: !!p.cardinalate, currentRole: asgn?.role ?? null, riteType: p.rite.type, hasEpiscopalConsecration: !!con }),
+      styleOfAddress:       computeStyleOfAddress({ styleOfAddress: p.styleOfAddress, isCardinal: currentCardinal && !laicized, currentRole: asgn?.role ?? null, riteType: p.rite.type, hasEpiscopalConsecration: !!con, isLaicized: laicized }),
       // Biographical
       dateOfBirth:          p.dateOfBirth?.toISOString() ?? null,
       placeOfBirth:         p.placeOfBirth,
@@ -96,7 +102,7 @@ export async function GET(request: Request) {
       priestOrdLocation:    ord?.location ?? null,
       episcopalConsDate:    con?.date?.toISOString() ?? null,
       episcopalConsLocation: con?.location ?? null,
-      principalConsecrator: con?.principalConsecrator ? formatName(con.principalConsecrator, { honorific: false, isCardinal: !!con.principalConsecrator.cardinalate }) : null,
+      principalConsecrator: con?.principalConsecrator ? formatName(con.principalConsecrator, { honorific: false, isCardinal: isCurrentCardinal(con.principalConsecrator) }) : null,
       // Other
       religiousOrder:       p.religiousOrder?.abbreviation ?? null,
       rite:                 p.rite.name,

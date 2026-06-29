@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma'
 import { formatSeeName } from '@/lib/utils/formatSeeName'
 import { formatName } from '@/lib/utils/formatName'
 import { computeStyleOfAddress } from '@/lib/utils/styleOfAddress'
+import { isCurrentCardinal, isLaicized } from '@/lib/utils/personStatus'
 import { EMERITUS_ROLES, ORDINARY_ROLES, isElectRole } from '@/lib/utils/roles'
 import { buildPersonNameSearchWhere } from '@/lib/utils/personSearch'
 
@@ -128,7 +129,7 @@ function buildBaseWhere(
   if (filters.isElector) {
     const today = new Date()
     const electorCutoff = new Date(today.getFullYear() - 80, today.getMonth(), today.getDate())
-    and.push({ cardinalate: { isNot: null }, dateOfBirth: { gt: electorCutoff } })
+    and.push({ cardinalate: { is: { dateEnded: null } }, dateOfBirth: { gt: electorCutoff } })
   }
 
   if (filters.appointmentPope) {
@@ -198,7 +199,7 @@ function buildRankWhere(rank: string[]): Prisma.PersonWhereInput {
   if (!rank.length) return {}
   const or: Prisma.PersonWhereInput[] = []
   if (rank.includes('cardinal')) {
-    or.push({ cardinalate: { isNot: null } })
+    or.push({ cardinalate: { is: { dateEnded: null } } })
   }
   if (rank.includes('archbishop')) {
     or.push({ assignments: { some: { isCurrent: true, role: { in: ORDINARY_ROLES }, see: { seeType: 'archdiocese' } } } })
@@ -236,7 +237,7 @@ const listInclude = {
     orderBy: [{ startDate: 'desc' }, { installedDate: 'desc' }] as Prisma.AssignmentOrderByWithRelationInput[],
     take: 5,
   },
-  cardinalate: { select: { id: true } },
+  cardinalate: { select: { id: true, dateEnded: true } },
   consecrations: {
     orderBy: { date: 'asc' } as Prisma.EpiscopalConsecrationOrderByWithRelationInput,
     take: 1,
@@ -258,6 +259,7 @@ export interface BishopListItem {
   religiousOrderId: string | null
   religiousOrderFullName: string | null
   portraitUrl: string | null
+  isLaicized: boolean
   /** Full formatted display name, e.g. "Most Rev. William E. Lori" */
   displayName: string
   /** Computed style of address, e.g. "His Eminence", "His Excellency" */
@@ -317,10 +319,11 @@ function statusLabel(status: BishopListItem['status']): string {
 function toListItem(p: ListRaw): BishopListItem {
   const asgn = p.assignments[0] ?? null
   const cons = p.consecrations[0] ?? null
-  const isCardinal = !!p.cardinalate
+  const isCardinal = isCurrentCardinal(p)
+  const laicized = isLaicized(p)
   const status = getBishopStatus(p)
   const hasEpiscopalConsecration = !!cons
-  const honorificLabel = isElectRole(asgn?.role) && !hasEpiscopalConsecration ? 'Rev.' : 'Most Rev.'
+  const honorificLabel = laicized ? null : isElectRole(asgn?.role) && !hasEpiscopalConsecration ? 'Rev.' : 'Most Rev.'
   return {
     id:            p.id,
     slug:          p.slug,
@@ -332,13 +335,15 @@ function toListItem(p: ListRaw): BishopListItem {
     religiousOrderId: p.religiousOrder?.id ?? null,
     religiousOrderFullName: p.religiousOrder?.fullName ?? null,
     portraitUrl:   p.portraitUrl,
-    displayName:   formatName(p, { isCardinal, honorificLabel }),
+    isLaicized:    laicized,
+    displayName:   formatName(p, { isCardinal: isCardinal && !laicized, honorificLabel }),
     styleOfAddress: computeStyleOfAddress({
       styleOfAddress: p.styleOfAddress,
-      isCardinal,
+      isCardinal: isCardinal && !laicized,
       currentRole: asgn?.role ?? null,
       riteType: p.rite.type,
       hasEpiscopalConsecration,
+      isLaicized: laicized,
     }),
     currentAssignment: asgn
       ? {
@@ -349,7 +354,7 @@ function toListItem(p: ListRaw): BishopListItem {
           seeName:  formatSeeName(asgn.see.name, asgn.see.seeType, asgn.see.namePrefixOverride),
         }
       : null,
-    isCardinal,
+    isCardinal: isCardinal && !laicized,
     status,
     statusLabel: statusLabel(status),
     episcopalConsecrationDate: cons ? cons.date.toISOString().slice(0, 10) : null,
@@ -474,7 +479,7 @@ async function getFilterCounts(
       }),
     }),
     prisma.person.count({ where: andWhere(forStatus, { dateOfDeath: { not: null } }) }),
-    prisma.person.count({ where: andWhere(forRank, { cardinalate: { isNot: null } }) }),
+    prisma.person.count({ where: andWhere(forRank, { cardinalate: { is: { dateEnded: null } } }) }),
     prisma.person.count({
       where: andWhere(forRank, {
         assignments: { some: { isCurrent: true, role: { in: ORDINARY_ROLES }, see: { seeType: 'archdiocese' } } },
@@ -506,7 +511,7 @@ const detailInclude = {
   priesthoodOrdination: {
     include: {
       ordainingBishop: {
-        select: { id: true, slug: true, firstName: true, middleName: true, lastName: true, suffix: true, religiousOrder: { select: { abbreviation: true } }, portraitUrl: true, cardinalate: { select: { id: true } } },
+        select: { id: true, slug: true, firstName: true, middleName: true, lastName: true, suffix: true, religiousOrder: { select: { abbreviation: true } }, portraitUrl: true, cardinalate: { select: { id: true, dateEnded: true } } },
       },
       incardinationSee: {
         select: { id: true, slug: true, name: true, seeType: true, namePrefixOverride: true },
@@ -519,13 +524,13 @@ const detailInclude = {
   consecrations: {
     include: {
       principalConsecrator: {
-        select: { id: true, slug: true, firstName: true, middleName: true, lastName: true, suffix: true, religiousOrder: { select: { abbreviation: true } }, portraitUrl: true, cardinalate: { select: { id: true } } },
+        select: { id: true, slug: true, firstName: true, middleName: true, lastName: true, suffix: true, religiousOrder: { select: { abbreviation: true } }, portraitUrl: true, cardinalate: { select: { id: true, dateEnded: true } } },
       },
       coConsecrators: {
         orderBy: { ordinal: 'asc' } as Prisma.EpiscopalConsecrationCoConsecratorOrderByWithRelationInput,
         include: {
           coConsecrator: {
-            select: { id: true, slug: true, firstName: true, middleName: true, lastName: true, suffix: true, religiousOrder: { select: { abbreviation: true } }, portraitUrl: true, cardinalate: { select: { id: true } } },
+            select: { id: true, slug: true, firstName: true, middleName: true, lastName: true, suffix: true, religiousOrder: { select: { abbreviation: true } }, portraitUrl: true, cardinalate: { select: { id: true, dateEnded: true } } },
           },
         },
       },
@@ -552,10 +557,12 @@ const detailInclude = {
           suffix: true,
           dateOfBirth: true,
           dateOfDeath: true,
+          laicizedDate: true,
+          laicizationReason: true,
           religiousOrder: { select: { abbreviation: true } },
           portraitUrl: true,
           styleOfAddress: true,
-          cardinalate: { select: { id: true } },
+          cardinalate: { select: { id: true, dateEnded: true } },
           rite: { select: { type: true } },
           assignments: {
             where: { isCurrent: true } as Prisma.AssignmentWhereInput,
@@ -579,8 +586,9 @@ export async function getBishopBySlug(slug: string): Promise<BishopDetail | null
   })
   if (!person) return null
   const currentAssignment = person.assignments.find(a => a.isCurrent && a.role !== 'apostolic_administrator') ?? null
-  const honorificLabel = isElectRole(currentAssignment?.role) && person.consecrations.length === 0 ? 'Rev.' : 'Most Rev.'
-  return { ...person, displayName: formatName(person, { isCardinal: !!person.cardinalate, honorificLabel }) }
+  const laicized = isLaicized(person)
+  const honorificLabel = laicized ? null : isElectRole(currentAssignment?.role) && person.consecrations.length === 0 ? 'Rev.' : 'Most Rev.'
+  return { ...person, displayName: formatName(person, { isCardinal: isCurrentCardinal(person) && !laicized, honorificLabel }) }
 }
 
 // ─── getBishopLineage ─────────────────────────────────────────────────────────
@@ -616,7 +624,7 @@ export async function getBishopLineage(
             suffix: true,
             religiousOrder: { select: { abbreviation: true } },
             portraitUrl: true,
-            cardinalate: { select: { id: true } },
+            cardinalate: { select: { id: true, dateEnded: true } },
             assignments: {
               where: { isCurrent: true } as Prisma.AssignmentWhereInput,
               include: { see: { select: { id: true, slug: true, name: true, seeType: true, namePrefixOverride: true } } },
@@ -633,9 +641,9 @@ export async function getBishopLineage(
     chain.push({
       id: p.id,
       slug: p.slug,
-      displayName: formatName(p, { isCardinal: !!p.cardinalate }),
+      displayName: formatName(p, { isCardinal: isCurrentCardinal(p) }),
       portraitUrl: p.portraitUrl,
-      isCardinal: !!p.cardinalate,
+      isCardinal: isCurrentCardinal(p),
       currentTitle: asgn
         ? formatSeeName(asgn.see.name, asgn.see.seeType, asgn.see.namePrefixOverride)
         : null,

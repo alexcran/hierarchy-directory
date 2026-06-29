@@ -1,5 +1,6 @@
 import prisma from '@/lib/prisma'
 import { formatName } from '@/lib/utils/formatName'
+import { isCurrentCardinal } from '@/lib/utils/personStatus'
 import { AssignmentsClient, type AssignmentRow } from './AssignmentsClient'
 import { type Prisma } from '@prisma/client'
 
@@ -16,7 +17,7 @@ const assignmentInclude = {
       suffix: true,
       religiousOrder: true,
       portraitUrl: true,
-      cardinalate: { select: { id: true } },
+      cardinalate: { select: { id: true, dateEnded: true } },
     },
   },
   see: { select: { name: true } },
@@ -33,9 +34,9 @@ export default async function AdminAssignmentsPage() {
   const rows: AssignmentRow[] = assignments.map((a: AdminAssignment) => ({
     id:          a.id,
     personId:    a.personId,
-    personName:  formatName(a.person, { honorific: false, isCardinal: !!a.person.cardinalate }),
+    personName:  formatName(a.person, { honorific: false, isCardinal: isCurrentCardinal(a.person) }),
     portraitUrl: a.person.portraitUrl,
-    isCardinal:  !!a.person.cardinalate,
+    isCardinal:  isCurrentCardinal(a.person),
     seeName:     a.see.name,
     role:        a.role,
     startDate:   a.startDate.toISOString().slice(0, 10),

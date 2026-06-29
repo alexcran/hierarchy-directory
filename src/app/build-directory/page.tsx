@@ -114,12 +114,12 @@ function BishopRow({
         name={bishop.displayName}
         width={48}
         height={64}
-        rankColor={bishop.isCardinal ? '#C41E3A' : '#007A00'}
+        rankColor={bishop.isLaicized ? '#1A1714' : bishop.isCardinal ? '#C41E3A' : '#007A00'}
         barHeight={5}
       />
       <div className="flex-1 min-w-0">
         {bishop.styleOfAddress && (
-          <p className="font-display text-xs italic leading-snug truncate" style={{ color: bishop.isCardinal ? '#C41E3A' : '#007A00' }}>
+          <p className="font-display text-xs italic leading-snug truncate" style={{ color: bishop.isLaicized ? '#1A1714' : bishop.isCardinal ? '#C41E3A' : '#007A00' }}>
             {bishop.styleOfAddress}
           </p>
         )}
@@ -437,7 +437,7 @@ function SampleEntryPreview({ bishops, config }: { bishops: BishopEntry[]; confi
     medium:  { card: 150, portraitW: 90,  portraitH: 120, name: 'text-sm', meta: 'text-[11px]', small: 'text-[10px]' },
     small:   { card: 118, portraitW: 64,  portraitH: 85,  name: 'text-xs', meta: 'text-[10px]', small: 'text-[9px]' },
   }[config.gridDensity]
-  const rankColor = bishop?.isCardinal ? '#C41E3A' : '#007A00'
+  const rankColor = bishop?.isLaicized ? '#1A1714' : bishop?.isCardinal ? '#C41E3A' : '#007A00'
   const fallbackName = bishop?.displayName ?? 'Sample Bishop'
   const initials = fallbackName.split(' ').filter(Boolean).map((part) => part[0]).join('').slice(0, 2)
   const lines: Array<{ text: string | null | undefined; kind?: 'primary' | 'secondary' | 'italic' }> = [

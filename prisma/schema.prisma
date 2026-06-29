@@ -47,6 +47,8 @@ model Person {
   placeOfBirth        String?   @map("place_of_birth") @db.VarChar(200)
   countryOfBirthId    String?   @map("country_of_birth_id")
   dateOfDeath         DateTime? @map("date_of_death") @db.Date
+  laicizedDate        DateTime? @map("laicized_date") @db.Date
+  laicizationReason   String?   @map("laicization_reason") @db.VarChar(100)
   riteId              String    @map("rite_id")
   slug                String    @unique @db.VarChar(200)
   styleOfAddress      String?   @map("style_of_address") @db.VarChar(50)
@@ -268,6 +270,8 @@ model Cardinalate {
   cardinalOrder String   @map("cardinal_order") @db.VarChar(20) // 'deacon', 'priest', 'bishop'
   titularChurch String?  @map("titular_church") @db.VarChar(200)
   isElector     Boolean  @map("is_elector")
+  dateEnded     DateTime? @map("date_ended") @db.Date
+  endReason     String?   @map("end_reason") @db.VarChar(100)
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 

@@ -6,6 +6,7 @@ export interface BishopEntry {
   lastName: string
   portraitUrl: string | null
   isCardinal: boolean
+  isLaicized?: boolean
   cardinalDateCreated: string | null
   cardinalRank: string | null
   // Current Role

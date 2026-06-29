@@ -1,6 +1,4 @@
 import { Document, Page, View, Text, Image, Font, StyleSheet } from '@react-pdf/renderer'
-import { formatName } from '@/lib/utils/formatName'
-import { getRankColor as getSoaColor } from '@/lib/utils/formatTitle'
 import type { BishopEntry, DirectoryConfig } from './types'
 
 Font.register({
@@ -33,6 +31,7 @@ const COLORS = {
   burgundy:  '#6B1A2A',
   green:     '#007A00',
   scarlet:   '#C41E3A',
+  black:     '#1A1714',
   border:    '#E8E4E0',
   surface:   '#F5F3F0',
 }
@@ -273,7 +272,7 @@ function BishopCell({
   const w = colWidth - cellPaddingX * 2
   const portraitW = Math.min(portrait.w, w)
   const portraitH = Math.round(portraitW * 4 / 3)
-  const rankColor = bishop.isCardinal ? COLORS.scarlet : COLORS.green
+  const rankColor = bishop.isLaicized ? COLORS.black : bishop.isCardinal ? COLORS.scarlet : COLORS.green
 
   return (
     <View wrap={false} style={[
@@ -297,14 +296,14 @@ function BishopCell({
 
       {/* Style of address — italic, rank color; shown before name */}
       {fields.styleOfAddress && bishop.styleOfAddress && (
-        <Text style={[styles.metaItalic, { fontSize: fonts.small, width: w, color: getSoaColor(bishop.isCardinal), marginTop: 2 }]}>
+        <Text style={[styles.metaItalic, { fontSize: fonts.small, width: w, color: rankColor, marginTop: 2 }]}>
           {bishop.styleOfAddress}
         </Text>
       )}
 
       {/* Name — always shown */}
       <Text style={[styles.bishopName, { fontSize: fonts.name, width: w }]}>
-        {formatName(bishop, { isCardinal: bishop.isCardinal })}
+        {bishop.displayName}
       </Text>
 
       {/* Current Role group — title then see */}

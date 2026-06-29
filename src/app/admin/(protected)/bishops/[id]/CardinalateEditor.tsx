@@ -6,6 +6,8 @@ interface CardinalateData {
   cardinalOrder: string
   titularChurch: string
   isElector: boolean
+  dateEnded: string
+  endReason: string
 }
 
 interface Props {
@@ -21,11 +23,18 @@ const ORDER_OPTIONS = [
   { value: 'bishop', label: 'Cardinal Bishop' },
 ]
 
+const END_REASON_OPTIONS = [
+  { value: 'resigned_from_cardinalate', label: 'Resigned from the College of Cardinals' },
+  { value: 'removed_from_cardinalate', label: 'Removed from the College of Cardinals' },
+  { value: 'renounced_cardinalate', label: 'Renounced the cardinalate' },
+]
+
 export function CardinalateEditor({ personId, initial }: Props) {
   const [isCardinal, setIsCardinal] = useState(!!initial)
   const [fields, setFields] = useState<CardinalateData>(
-    initial ?? { dateCreated: '', cardinalOrder: 'priest', titularChurch: '', isElector: true }
+    initial ?? { dateCreated: '', cardinalOrder: 'priest', titularChurch: '', isElector: true, dateEnded: '', endReason: '' }
   )
+  const [hasEnded, setHasEnded] = useState(!!initial?.dateEnded)
   const [status, setStatus] = useState<Status>('idle')
   const [errorMsg, setErrorMsg] = useState('')
 
@@ -44,13 +53,24 @@ export function CardinalateEditor({ personId, initial }: Props) {
     }
   }
 
+  function handleEndedToggle(checked: boolean) {
+    setHasEnded(checked)
+    if (!checked) {
+      setFields(prev => ({ ...prev, dateEnded: '', endReason: '' }))
+    } else if (!fields.endReason) {
+      setFields(prev => ({ ...prev, endReason: 'resigned_from_cardinalate' }))
+    }
+    if (status === 'saved') setStatus('idle')
+  }
+
   async function handleSave() {
     setStatus('saving')
     setErrorMsg('')
+    const payload = hasEnded ? fields : { ...fields, dateEnded: '', endReason: '' }
     const res = await fetch(`/api/admin/cardinalate/${personId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(fields),
+      body: JSON.stringify(payload),
     })
     if (res.ok) { setStatus('saved') }
     else { setErrorMsg('Save failed'); setStatus('error') }
@@ -119,6 +139,40 @@ export function CardinalateEditor({ personId, initial }: Props) {
             />
             <span className="text-sm font-body text-text-secondary">Cardinal elector (under 80)</span>
           </label>
+
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={hasEnded}
+              onChange={e => handleEndedToggle(e.target.checked)}
+              className="rounded border-border text-burgundy focus:ring-burgundy/30"
+            />
+            <span className="text-sm font-body text-text-secondary">Cardinalate ended before death</span>
+          </label>
+
+          {hasEnded && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-body font-semibold text-text-secondary mb-1.5 uppercase tracking-wide">Date ended</label>
+                <input
+                  type="date"
+                  value={fields.dateEnded}
+                  onChange={e => set('dateEnded', e.target.value)}
+                  className="w-full px-3 py-2 text-sm font-body border border-border rounded-lg bg-white text-text-primary focus:outline-none focus:ring-2 focus:ring-burgundy/30 focus:border-burgundy transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-body font-semibold text-text-secondary mb-1.5 uppercase tracking-wide">End reason</label>
+                <select
+                  value={fields.endReason}
+                  onChange={e => set('endReason', e.target.value)}
+                  className="w-full px-3 py-2 text-sm font-body border border-border rounded-lg bg-white text-text-primary focus:outline-none focus:ring-2 focus:ring-burgundy/30 focus:border-burgundy transition-colors"
+                >
+                  {END_REASON_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+            </div>
+          )}
 
           <div className="flex items-center gap-4 pt-1">
             <button

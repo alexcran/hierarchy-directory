@@ -70,7 +70,7 @@ function SearchDropdown({ results, onBishop, onDiocese }: {
                 name={b.name}
                 width={28}
                 height={28}
-                rankColor={b.isCardinal ? '#C41E3A' : '#007A00'}
+                rankColor={b.isLaicized ? '#1A1714' : b.isCardinal ? '#C41E3A' : '#007A00'}
                 barHeight={4}
               />
               <div className="min-w-0">

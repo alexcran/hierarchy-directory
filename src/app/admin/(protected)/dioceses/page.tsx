@@ -1,6 +1,7 @@
 import prisma from '@/lib/prisma'
 import { formatSeeName } from '@/lib/utils/formatSeeName'
 import { formatName } from '@/lib/utils/formatName'
+import { isCurrentCardinal } from '@/lib/utils/personStatus'
 import { DioceseListClient, type DioceseRow } from './DioceseListClient'
 import { type Prisma } from '@prisma/client'
 
@@ -27,7 +28,7 @@ const seeSelect = {
           lastName: true,
           suffix: true,
           religiousOrder: true,
-          cardinalate: { select: { id: true } },
+          cardinalate: { select: { id: true, dateEnded: true } },
         },
       },
     },
@@ -49,7 +50,7 @@ export default async function AdminDiocesesPage() {
     displayName:     formatSeeName(s.name, s.seeType, s.namePrefixOverride),
     seeType:         s.seeType,
     province:        s.metropolitanSee?.name ?? null,
-    currentOrdinary: s.assignments[0]?.person ? formatName(s.assignments[0].person, { isCardinal: !!s.assignments[0].person.cardinalate }) : null,
+    currentOrdinary: s.assignments[0]?.person ? formatName(s.assignments[0].person, { isCardinal: isCurrentCardinal(s.assignments[0].person) }) : null,
     hasCoatOfArms:   !!s.coatOfArmsUrl,
     updatedAt:       s.updatedAt.toISOString(),
   }))

@@ -22,6 +22,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       photoCredit:         optionalStringUpdate(body, 'photoCredit'),
       dateOfBirth:         optionalDateUpdate(body, 'dateOfBirth'),
       dateOfDeath:         optionalDateUpdate(body, 'dateOfDeath'),
+      laicizedDate:        optionalDateUpdate(body, 'laicizedDate'),
+      laicizationReason:   optionalStringUpdate(body, 'laicizationReason'),
       placeOfBirth:        optionalStringUpdate(body, 'placeOfBirth'),
       catholicHierarchyId: optionalStringUpdate(body, 'catholicHierarchyId'),
       gcatholicId:         optionalStringUpdate(body, 'gcatholicId'),

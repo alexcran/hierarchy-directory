@@ -5,6 +5,7 @@ import { formatSeeName } from '@/lib/utils/formatSeeName'
 import { formatName } from '@/lib/utils/formatName'
 import { formatProvinceName } from '@/lib/utils/formatProvinceName'
 import { formatRoleTitle } from '@/lib/utils/formatTitle'
+import { isCurrentCardinal } from '@/lib/utils/personStatus'
 import { ORDINARY_ROLES } from '@/lib/utils/roles'
 import { DiocesesClient, type DioceseEntry } from './DiocesesClient'
 
@@ -57,7 +58,7 @@ export default async function DiocesesPage() {
               suffix: true,
               religiousOrder: { select: { abbreviation: true } },
               portraitUrl: true,
-              cardinalate: { select: { id: true } },
+              cardinalate: { select: { id: true, dateEnded: true } },
             },
           },
         },
@@ -94,7 +95,7 @@ export default async function DiocesesPage() {
       bishop: ordinaryAssignment?.person
         ? {
             slug:        ordinaryAssignment.person.slug,
-            displayName: formatName(ordinaryAssignment.person, { isCardinal: !!ordinaryAssignment.person.cardinalate }),
+            displayName: formatName(ordinaryAssignment.person, { isCardinal: isCurrentCardinal(ordinaryAssignment.person) }),
             title:       formatRoleTitle(ordinaryAssignment.role, seeName),
             portraitUrl: ordinaryAssignment.person.portraitUrl,
           }
@@ -102,7 +103,7 @@ export default async function DiocesesPage() {
       apostolicAdmin: adminAssignment?.person
         ? {
             slug:        adminAssignment.person.slug,
-            displayName: formatName(adminAssignment.person, { isCardinal: !!adminAssignment.person.cardinalate }),
+            displayName: formatName(adminAssignment.person, { isCardinal: isCurrentCardinal(adminAssignment.person) }),
             portraitUrl: adminAssignment.person.portraitUrl,
           }
         : null,

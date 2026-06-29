@@ -4,7 +4,9 @@ export function computeStyleOfAddress(opts: {
   currentRole: string | null | undefined
   riteType: string | null | undefined
   hasEpiscopalConsecration?: boolean
+  isLaicized?: boolean
 }): string {
+  if (opts.isLaicized) return ''
   if (opts.styleOfAddress) return opts.styleOfAddress
   if (opts.isCardinal) return 'His Eminence'
   const role = opts.currentRole
@@ -17,5 +19,6 @@ export function computeStyleOfAddress(opts: {
 }
 
 export function getStyleOfAddressColor(styleOfAddress: string): string {
+  if (!styleOfAddress) return '#1A1714'
   return styleOfAddress === 'His Eminence' ? '#C41E3A' : '#007A00'
 }

@@ -103,7 +103,7 @@ function AffiliatedRow({ entry }: { entry: SuccessionEntry }) {
         name={entry.displayName}
         width={40}
         height={40}
-        rankColor={entry.isCardinal ? '#C41E3A' : '#007A00'}
+        rankColor={entry.isLaicized ? '#1A1714' : entry.isCardinal ? '#C41E3A' : '#007A00'}
         barHeight={4}
       />
       <div className="min-w-0 flex-1">
@@ -217,7 +217,7 @@ export default async function DioceseDetailPage({ params }: { params: { slug: st
                       name={leader.displayName}
                       width={56}
                       height={56}
-                      rankColor={leader.isCardinal ? '#C41E3A' : '#007A00'}
+                      rankColor={leader.isLaicized ? '#1A1714' : leader.isCardinal ? '#C41E3A' : '#007A00'}
                       barHeight={5}
                     />
                     <div className="min-w-0">

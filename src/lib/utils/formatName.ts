@@ -9,7 +9,7 @@ interface NameFields {
 interface FormatNameOptions {
   /** Prepend "Most Rev." — default true, ignored when isCardinal is true */
   honorific?: boolean
-  honorificLabel?: string
+  honorificLabel?: string | null
   /** Abbreviate middle name to initial — default true, ignored when isCardinal is true */
   abbreviateMiddle?: boolean
   /**
@@ -49,7 +49,7 @@ export function formatName(
   }
 
   const parts: string[] = []
-  if (honorific) parts.push(honorificLabel)
+  if (honorific && honorificLabel) parts.push(honorificLabel)
   parts.push(person.firstName)
 
   if (person.middleName) {

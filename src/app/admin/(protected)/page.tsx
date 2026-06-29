@@ -1,6 +1,7 @@
 import prisma from '@/lib/prisma'
 import Link from 'next/link'
 import { formatName } from '@/lib/utils/formatName'
+import { isCurrentCardinal } from '@/lib/utils/personStatus'
 import { type Prisma } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
@@ -8,10 +9,10 @@ export const dynamic = 'force-dynamic'
 type Rank = 'Cardinal' | 'Archbishop' | 'Bishop'
 
 function getRank(
-  cardinalate: { id: string } | null,
+  cardinalate: { id: string; dateEnded: Date | null } | null,
   assignments: Array<{ role: string; see: { seeType: string } }>,
 ): Rank {
-  if (cardinalate) return 'Cardinal'
+  if (cardinalate && !cardinalate.dateEnded) return 'Cardinal'
   const a = assignments[0]
   if (a && a.see.seeType === 'archdiocese' && a.role !== 'auxiliary') return 'Archbishop'
   return 'Bishop'
@@ -32,7 +33,7 @@ const recentPersonSelect = {
   suffix: true,
   religiousOrder: true,
   updatedAt: true,
-  cardinalate: { select: { id: true } },
+  cardinalate: { select: { id: true, dateEnded: true } },
   assignments: {
     where: { isCurrent: true },
     select: { role: true, see: { select: { seeType: true } } },
@@ -108,7 +109,7 @@ export default async function AdminDashboardPage() {
       const rank = getRank(p.cardinalate, p.assignments)
       return {
         key: `p-${p.id}`,
-        label: formatName(p, { honorific: false, isCardinal: !!p.cardinalate }),
+        label: formatName(p, { honorific: false, isCardinal: isCurrentCardinal(p) }),
         href: `/admin/bishops/${p.id}`,
         badge: rank,
         badgeStyle: RANK_STYLE[rank],

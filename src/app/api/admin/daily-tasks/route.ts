@@ -6,6 +6,7 @@ import { convertElectRole, ELECT_ROLES } from '@/lib/utils/roles'
 import { formatName } from '@/lib/utils/formatName'
 import { formatSeeName } from '@/lib/utils/formatSeeName'
 import { formatRoleTitle } from '@/lib/utils/formatTitle'
+import { isCurrentCardinal } from '@/lib/utils/personStatus'
 
 export const dynamic = 'force-dynamic'
 
@@ -57,7 +58,7 @@ export async function GET(req: NextRequest) {
           lastName: true,
           suffix: true,
           religiousOrder: { select: { abbreviation: true } },
-          cardinalate: { select: { id: true } },
+          cardinalate: { select: { id: true, dateEnded: true } },
         },
       },
       see: { select: { id: true, slug: true, name: true, seeType: true, namePrefixOverride: true } },
@@ -72,7 +73,7 @@ export async function GET(req: NextRequest) {
     if (nextRole === oldRole) continue
 
     const seeName = formatSeeName(assignment.see.name, assignment.see.seeType, assignment.see.namePrefixOverride)
-    const personName = formatName(assignment.person, { honorific: false, isCardinal: !!assignment.person.cardinalate })
+    const personName = formatName(assignment.person, { honorific: false, isCardinal: isCurrentCardinal(assignment.person) })
     const oldTitle = formatRoleTitle(oldRole, seeName)
     const newTitle = formatRoleTitle(nextRole, seeName)
     const installed = assignment.installedDate?.toISOString().slice(0, 10) ?? ''

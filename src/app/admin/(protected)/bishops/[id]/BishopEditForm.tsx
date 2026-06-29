@@ -7,7 +7,14 @@ interface Field {
   label: string
   type?: 'text' | 'url' | 'date' | 'textarea' | 'order'
   placeholder?: string
+  suggestions?: Array<{ value: string; label: string }>
 }
+
+const LAICIZATION_REASON_OPTIONS = [
+  { value: 'dismissed_from_clerical_state', label: 'Dismissed from the clerical state' },
+  { value: 'dispensed_from_clerical_state', label: 'Dispensed from the clerical state' },
+  { value: 'laicized', label: 'Laicized' },
+]
 
 const SECTIONS: { heading: string; fields: Field[] }[] = [
   {
@@ -26,6 +33,8 @@ const SECTIONS: { heading: string; fields: Field[] }[] = [
     fields: [
       { key: 'dateOfBirth',  label: 'Date of birth', type: 'date' },
       { key: 'dateOfDeath',  label: 'Date of death', type: 'date' },
+      { key: 'laicizedDate', label: 'Laicized date', type: 'date' },
+      { key: 'laicizationReason', label: 'Laicization reason', placeholder: 'Select or type a reason', suggestions: LAICIZATION_REASON_OPTIONS },
       { key: 'placeOfBirth', label: 'Place of birth', placeholder: 'City, State' },
       { key: 'motto',        label: 'Episcopal motto', placeholder: 'e.g. "Peace Be With You"' },
     ],
@@ -109,13 +118,23 @@ export function BishopEditForm({
                     className="w-full px-3 py-2 text-sm font-body border border-border rounded-lg bg-white text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-burgundy/30 focus:border-burgundy transition-colors resize-none"
                   />
                 ) : (
-                  <input
-                    type={f.type ?? 'text'}
-                    value={fields[f.key] ?? ''}
-                    onChange={e => set(f.key, e.target.value)}
-                    placeholder={f.placeholder}
-                    className="w-full px-3 py-2 text-sm font-body border border-border rounded-lg bg-white text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-burgundy/30 focus:border-burgundy transition-colors"
-                  />
+                  <>
+                    <input
+                      type={f.type ?? 'text'}
+                      value={fields[f.key] ?? ''}
+                      onChange={e => set(f.key, e.target.value)}
+                      placeholder={f.placeholder}
+                      list={f.suggestions ? `${f.key}-suggestions` : undefined}
+                      className="w-full px-3 py-2 text-sm font-body border border-border rounded-lg bg-white text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-burgundy/30 focus:border-burgundy transition-colors"
+                    />
+                    {f.suggestions && (
+                      <datalist id={`${f.key}-suggestions`}>
+                        {f.suggestions.map(option => (
+                          <option key={option.value} value={option.value} label={option.label} />
+                        ))}
+                      </datalist>
+                    )}
+                  </>
                 )}
               </div>
             ))}

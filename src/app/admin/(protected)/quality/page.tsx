@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import prisma from '@/lib/prisma'
 import { formatName } from '@/lib/utils/formatName'
+import { isCurrentCardinal } from '@/lib/utils/personStatus'
 import { type Prisma } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
@@ -14,7 +15,7 @@ const qualityPersonSelect = {
   lastName: true,
   suffix: true,
   religiousOrder: true,
-  cardinalate: { select: { id: true } },
+  cardinalate: { select: { id: true, dateEnded: true } },
   assignments: {
     where: { isCurrent: true },
     orderBy: { startDate: 'desc' },
@@ -44,7 +45,7 @@ const qualitySeeSelect = {
           lastName: true,
           suffix: true,
           religiousOrder: true,
-          cardinalate: { select: { id: true } },
+          cardinalate: { select: { id: true, dateEnded: true } },
         },
       },
     },
@@ -58,7 +59,7 @@ const qualityNamePersonSelect = {
   lastName: true,
   suffix: true,
   religiousOrder: true,
-  cardinalate: { select: { id: true } },
+  cardinalate: { select: { id: true, dateEnded: true } },
 } satisfies Prisma.PersonSelect
 
 type QualityPerson = Prisma.PersonGetPayload<{ select: typeof qualityPersonSelect }>
@@ -164,7 +165,7 @@ export default async function AdminQualityPage() {
               {peopleWithDuplicateCurrentAssignments.map((person) => (
                 <li key={person.id} className="px-6 py-4">
                   <Link href={`/admin/bishops/${person.id}`} className="font-body text-sm font-semibold text-burgundy hover:underline">
-                    {formatName(person, { honorific: false, isCardinal: !!person.cardinalate })}
+                    {formatName(person, { honorific: false, isCardinal: isCurrentCardinal(person) })}
                   </Link>
                   <p className="font-body text-xs text-text-tertiary mt-1">
                     {person.assignments.map((assignment) => `${assignment.role} - ${seeLabel(assignment.see)}`).join('; ')}
@@ -186,7 +187,7 @@ export default async function AdminQualityPage() {
                     {seeLabel(see)}
                   </Link>
                   <p className="font-body text-xs text-text-tertiary mt-1">
-                    {see.ordinaries.map((assignment) => formatName(assignment.person, { honorific: false, isCardinal: !!assignment.person.cardinalate })).join('; ')}
+                    {see.ordinaries.map((assignment) => formatName(assignment.person, { honorific: false, isCardinal: isCurrentCardinal(assignment.person) })).join('; ')}
                   </p>
                 </li>
               ))}
@@ -202,7 +203,7 @@ export default async function AdminQualityPage() {
               {missingPortraits.map((person) => (
                 <li key={person.id} className="px-6 py-3">
                   <Link href={`/admin/bishops/${person.id}`} className="font-body text-sm text-burgundy hover:underline">
-                    {formatName(person, { honorific: false, isCardinal: !!person.cardinalate })}
+                    {formatName(person, { honorific: false, isCardinal: isCurrentCardinal(person) })}
                   </Link>
                 </li>
               ))}
@@ -218,7 +219,7 @@ export default async function AdminQualityPage() {
               {missingCredits.map((person) => (
                 <li key={person.id} className="px-6 py-3">
                   <Link href={`/admin/bishops/${person.id}`} className="font-body text-sm text-burgundy hover:underline">
-                    {formatName(person, { honorific: false, isCardinal: !!person.cardinalate })}
+                    {formatName(person, { honorific: false, isCardinal: isCurrentCardinal(person) })}
                   </Link>
                 </li>
               ))}

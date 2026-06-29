@@ -16,12 +16,16 @@ export async function PUT(req: NextRequest, { params }: { params: { personId: st
       cardinalOrder: body.cardinalOrder,
       titularChurch: body.titularChurch || null,
       isElector:    body.isElector ?? false,
+      dateEnded:    body.dateEnded ? new Date(body.dateEnded) : null,
+      endReason:    body.endReason || null,
     },
     update: {
       dateCreated:  new Date(body.dateCreated),
       cardinalOrder: body.cardinalOrder,
       titularChurch: body.titularChurch || null,
       isElector:    body.isElector ?? false,
+      dateEnded:    body.dateEnded ? new Date(body.dateEnded) : null,
+      endReason:    body.endReason || null,
     },
   })
 

@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma'
 import { formatSeeName } from '@/lib/utils/formatSeeName'
 import { formatName } from '@/lib/utils/formatName'
 import { slugify, unslugify } from '@/lib/utils/slugify'
+import { isCurrentCardinal } from '@/lib/utils/personStatus'
 import { ORDINARY_ROLES } from '@/lib/utils/roles'
 
 export const dynamic = 'force-dynamic'
@@ -68,7 +69,7 @@ export async function GET(
                 select: {
                   id: true, slug: true, firstName: true, middleName: true, lastName: true,
                   suffix: true, religiousOrder: { select: { abbreviation: true } }, portraitUrl: true,
-                  cardinalate: { select: { id: true } },
+                  cardinalate: { select: { id: true, dateEnded: true } },
                 },
               },
             },
@@ -91,7 +92,7 @@ export async function GET(
             seeSlug:       s.slug,
             suffraganCount: s._count.suffraganSees,
             currentArchbishop: ord
-              ? { id: ord.id, slug: ord.slug, displayName: formatName(ord, { isCardinal: !!ord.cardinalate }), portraitUrl: ord.portraitUrl }
+              ? { id: ord.id, slug: ord.slug, displayName: formatName(ord, { isCardinal: isCurrentCardinal(ord) }), portraitUrl: ord.portraitUrl }
               : null,
           }
         }),
@@ -141,7 +142,7 @@ export async function GET(
                 select: {
                   id: true, slug: true, firstName: true, middleName: true, lastName: true,
                   suffix: true, religiousOrder: { select: { abbreviation: true } }, portraitUrl: true,
-                  cardinalate: { select: { id: true } },
+                  cardinalate: { select: { id: true, dateEnded: true } },
                 },
               },
             },
@@ -173,9 +174,9 @@ export async function GET(
               ? {
                   id:          ordinary.person.id,
                   slug:        ordinary.person.slug,
-                  displayName: formatName(ordinary.person, { isCardinal: !!ordinary.person.cardinalate }),
+                  displayName: formatName(ordinary.person, { isCardinal: isCurrentCardinal(ordinary.person) }),
                   portraitUrl: ordinary.person.portraitUrl,
-                  isCardinal:  !!ordinary.person.cardinalate,
+                  isCardinal:  isCurrentCardinal(ordinary.person),
                 }
               : null,
             auxiliaryCount: auxiliary.length,
